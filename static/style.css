@@ -106,3 +106,57 @@ a:hover {
 .table thead th { font-weight: 600; }
 .alert-success { background: #e6f9f2; color: var(--vivel-secondary); border: none; }
 .alert-danger { background: #ffeaea; color: #b8002e; border: none; }
+
+/* -------- Botones corporativos -------- */
+
+/* paleta extendida */
+:root {
+  --vivel-primary-dark: #009ec2;   /* hover azul */
+  --vivel-danger:       #dc3545;   /* rojo sólido */
+  --vivel-danger-dark:  #b02a37;   /* hover rojo */
+}
+
+/* base común (igual look & feel de tus .btn-primary/.btn-success) */
+.btn-azul,
+.btn-rojo {
+  border: none;
+  font-size: 1.08rem;
+  padding: 0.65rem 1.3rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px 0 rgba(0,185,228,0.07);
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+  color: #fff;
+}
+
+/* Azul corporativo: mismo tono que la navbar */
+.btn-azul {
+  background: var(--vivel-primary);
+}
+.btn-azul:hover,
+.btn-azul:focus {
+  background: var(--vivel-primary-dark);
+  color: #fff;
+}
+
+/* Rojo sólido (para acciones peligrosas) */
+.btn-rojo {
+  background: var(--vivel-danger);
+}
+.btn-rojo:hover,
+.btn-rojo:focus {
+  background: var(--vivel-danger-dark);
+  color: #fff;
+}
+
+/* versión pequeña */
+.btn-azul.btn-sm,
+.btn-rojo.btn-sm {
+  font-size: .9rem;
+  padding: .4rem .8rem;
+  border-radius: .45rem;
+}
+
+/* Botón con icono: espacio entre icono y texto */
+.btn i {
+  margin-right: .35rem;
+}

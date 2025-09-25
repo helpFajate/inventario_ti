@@ -82,19 +82,23 @@ def sp_historial_por_persona(nombre):
 # ---------- Consultas directas sobre la vista ----------
 
 def query_dispositivos(filtro_tag=None, filtro_persona=None, solo_activos=True):
+    """
+    Devuelve filas con claves en minúscula para que coincidan con el template:
+      tag, modelo, serial, ubicacion, personaasignada, estado, fechabaja
+    """
     conn = get_connection()
     cur = conn.cursor()
 
     sql = """
     SELECT
-        e.EquipoId,
-        LTRIM(RTRIM(e.Tag)) AS Tag,
-        e.Modelo,
-        e.Serial,
-        e.Ubicacion,
-        e.Estado  AS estado,
-        e.FechaBaja AS fechabaja,
-        pa.Nombre AS PersonaAsignada
+        e.EquipoId                          AS equipoid,
+        LTRIM(RTRIM(e.Tag))                 AS tag,
+        e.Modelo                            AS modelo,
+        e.Serial                            AS serial,
+        e.Ubicacion                         AS ubicacion,
+        ISNULL(e.Estado,'ACTIVO')           AS estado,
+        e.FechaBaja                         AS fechabaja,
+        pa.Nombre                           AS personaasignada
     FROM ti.Equipo e
     LEFT JOIN ti.Persona pa ON pa.PersonaId = e.PersonaAsignadaId
     WHERE e.Tag IS NOT NULL AND LTRIM(RTRIM(e.Tag)) <> ''
@@ -116,6 +120,7 @@ def query_dispositivos(filtro_tag=None, filtro_persona=None, solo_activos=True):
     rows = [dict(zip(cols, r)) for r in cur.fetchall()]
     cur.close(); conn.close()
     return rows
+
 
 
 
@@ -259,22 +264,54 @@ def obtener_equipo_por_tag(tag):
 
 def equipo_upsert_completo(tag, marca, modelo, serial, ubicacion, persona_asignada,
                            cargador, maletin, mouse, teclado, observaciones):
+    """
+    Upsert del equipo SIN perder la persona asignada.
+    - Si viene 'persona_asignada' la crea/actualiza y la deja en el equipo.
+    - Si viene vacía/None, conserva la PersonaAsignadaId actual.
+    """
     conn = get_connection()
     cur = conn.cursor()
-    # Si tienes PersonaAsignadaId, deberías buscarla por nombre o pasar el ID
+
+    # 1) Resolver PersonaAsignadaId (si se dio nombre)
+    persona_id = None
+    if persona_asignada and persona_asignada.strip():
+        cur.execute("""
+            DECLARE @PersonaId INT;
+            EXEC ti.sp_Persona_Upsert @Nombre=?, @PersonaId=@PersonaId OUTPUT;
+            SELECT @PersonaId;
+        """, (persona_asignada.strip(),))
+        row = cur.fetchone()
+        persona_id = row[0] if row else None
+
+    # 2) MERGE conservando la persona si no se envía nombre
     cur.execute("""
         MERGE ti.Equipo AS target
-        USING (SELECT ? AS Tag) AS source
-        ON (target.Tag = source.Tag)
+        USING (SELECT ? AS Tag) AS src
+        ON (target.Tag = src.Tag)
         WHEN MATCHED THEN
             UPDATE SET
-                Marca=?, Modelo=?, Serial=?, Ubicacion=?, PersonaAsignadaId=NULL,
-                Cargador=?, Maletin=?, Mouse=?, Teclado=?, Observaciones=?
+                Marca       = ?,
+                Modelo      = ?,
+                Serial      = ?,
+                Ubicacion   = ?,
+                -- si persona_id es NULL, conserva la que ya está
+                PersonaAsignadaId = COALESCE(?, target.PersonaAsignadaId),
+                Cargador    = ?,
+                Maletin     = ?,
+                Mouse       = ?,
+                Teclado     = ?,
+                Observaciones = ?
         WHEN NOT MATCHED THEN
             INSERT (Tag, Marca, Modelo, Serial, Ubicacion, PersonaAsignadaId, Cargador, Maletin, Mouse, Teclado, Observaciones)
-            VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?);
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
     """, (
-        tag, marca, modelo, serial, ubicacion, cargador, maletin, mouse, teclado, observaciones,
-        tag, marca, modelo, serial, ubicacion, cargador, maletin, mouse, teclado, observaciones
+        # WHEN MATCHED
+        tag, marca, modelo, serial, ubicacion, persona_id,
+        cargador, maletin, mouse, teclado, observaciones,
+        # WHEN NOT MATCHED (insert)
+        tag, marca, modelo, serial, ubicacion, persona_id,
+        cargador, maletin, mouse, teclado, observaciones
     ))
-    conn.commit(); cur.close(); conn.close()
+
+    conn.commit()
+    cur.close(); conn.close()

@@ -71,7 +71,7 @@ def device_view(tag):
         desc = request.form.get('descripcion') or None
         fecha = request.form.get('fecha') or None
         persona_rel = request.form.get('persona_rel') or None
-        registrado_por = request.form.get('registrado_por') or 'Mel'
+        registrado_por = request.form.get('registrado_por') or ''
         sp_equipo_agregar_cambio(tag, tipo, desc, fecha, persona_rel, registrado_por)
         flash('Cambio registrado', 'success')
         return redirect(url_for('device_view', tag=tag))
@@ -86,7 +86,7 @@ def device_reassign(tag):
     nueva = (request.form.get('nueva_persona') or '').strip()
     cargo = request.form.get('cargo') or None
     fecha = request.form.get('fecha') or None
-    registrado_por = request.form.get('registrado_por') or 'Mel'
+    registrado_por = request.form.get('registrado_por') or ''
     desc = request.form.get('descripcion') or None
     if not nueva:
         flash('Debe indicar el nombre de la nueva persona.', 'danger')
@@ -100,7 +100,7 @@ def device_reassign(tag):
 def device_baja(tag):
     motivo = request.form.get('motivo') or None
     fecha = request.form.get('fecha') or None
-    registrado_por = request.form.get('registrado_por') or 'Mel'
+    registrado_por = request.form.get('registrado_por') or ''
     sp_equipo_dar_baja(tag, motivo, fecha, registrado_por)
     flash(f'Equipo {tag} marcado en BAJA.', 'success')
     return redirect(url_for('device_view', tag=tag))

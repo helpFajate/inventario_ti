@@ -1,64 +1,65 @@
 {% extends "base.html" %}
-{% block title %}Nuevo equipo - Inventario TI{% endblock %}
 {% block content %}
 
-<h2 class="mb-4">Registrar / Actualizar equipo</h2>
-<div class="card shadow-sm mb-4">
-  <div class="card-body">
-    <form method="post">
-      <div class="row g-3">
-        <div class="col-md-4">
-          <label class="form-label">Activo</label>
-          <input name="tag" class="form-control" required>
+<div style="margin-left: 176px; margin-right: 32px;">
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h2 class="mb-4">Registrar / Actualizar equipo</h2>
+      <form method="post">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Activo</label>
+            <input type="text" name="tag" class="form-control">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Marca</label>
+            <input type="text" name="marca" class="form-control">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Modelo</label>
+            <input type="text" name="modelo" class="form-control">
+          </div>
         </div>
-        <div class="col-md-4">
-          <label class="form-label">Marca</label>
-          <input name="marca" class="form-control">
+
+        <div class="row g-3 mt-2">
+          <div class="col-md-4">
+            <label class="form-label">Serial</label>
+            <input type="text" name="serial" class="form-control">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Ubicación</label>
+            <input type="text" name="ubicacion" class="form-control">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Persona asignada (nombre)</label>
+            <input type="text" name="persona_asignada" class="form-control">
+          </div>
         </div>
-        <div class="col-md-4">
-          <label class="form-label">Modelo</label>
-          <input name="modelo" class="form-control">
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">Serial</label>
-          <input name="serial" class="form-control">
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">Ubicación</label>
-          <input name="ubicacion" class="form-control">
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">Persona asignada (nombre)</label>
-          <input name="persona_asignada" class="form-control">
-        </div>
-        <div class="col-md-12">
+
+        <div class="mt-3">
           <label class="form-label">Accesorios</label><br>
-          <div class="form-check form-check-inline">
-            <input class="form-check-input" type="checkbox" name="cargador" value="1" id="cargador">
-            <label class="form-check-label" for="cargador">Cargador</label>
-          </div>
-          <div class="form-check form-check-inline">
-            <input class="form-check-input" type="checkbox" name="maletin" value="1" id="maletin">
-            <label class="form-check-label" for="maletin">Maletín</label>
-          </div>
-          <div class="form-check form-check-inline">
-            <input class="form-check-input" type="checkbox" name="mouse" value="1" id="mouse">
-            <label class="form-check-label" for="mouse">Mouse</label>
-          </div>
-          <div class="form-check form-check-inline">
-            <input class="form-check-input" type="checkbox" name="teclado" value="1" id="teclado">
-            <label class="form-check-label" for="teclado">Teclado</label>
-          </div>
+          <label><input type="checkbox" name="cargador"> Cargador</label>
+          <label><input type="checkbox" name="maletin"> Maletín</label>
+          <label><input type="checkbox" name="mouse"> Mouse</label>
+          <label><input type="checkbox" name="teclado"> Teclado</label>
         </div>
-        <div class="col-md-12">
+
+        <div class="mt-3">
           <label class="form-label">Observaciones</label>
-          <textarea name="observaciones" class="form-control" rows="2"></textarea>
+          <textarea name="observaciones" class="form-control"></textarea>
         </div>
-      </div>
-      <button class="btn btn-success mt-3" type="submit">
-        <i class="bi bi-check-circle"></i> Guardar
-      </button>
-    </form>
+
+        <div class="d-flex justify-content-between mt-4">
+          <button type="submit" class="btn btn-success">
+            <i class="bi bi-check-circle"></i> Guardar
+          </button>
+          <a href="{{ url_for('index') }}" class="btn btn-primary">
+            ← Volver
+          </a>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
+
 {% endblock %}
