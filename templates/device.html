@@ -8,20 +8,67 @@
     <i class="bi bi-arrow-left"></i> Volver
   </a>
 </div>
-
+<!-- Datos generales del equipo -->
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-white"><strong>Datos del equipo</strong></div>
+  <div class="card-body">
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label class="form-label mb-0"><strong>Marca:</strong></label>
+        <div>{{ equipo.marca or '—' }}</div>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label mb-0"><strong>Modelo:</strong></label>
+        <div>{{ equipo.modelo or '—' }}</div>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label mb-0"><strong>Serial:</strong></label>
+        <div>{{ equipo.serial or '—' }}</div>
+      </div>
+      <div class="col-md-12">
+        <label class="form-label mb-0"><strong>Accesorios:</strong></label>
+        <div>
+          <span class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" disabled {% if equipo.cargador %}checked{% endif %}>
+            <label class="form-check-label">Cargador</label>
+          </span>
+          <span class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" disabled {% if equipo.maletin %}checked{% endif %}>
+            <label class="form-check-label">Maletín</label>
+          </span>
+          <span class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" disabled {% if equipo.mouse %}checked{% endif %}>
+            <label class="form-check-label">Mouse</label>
+          </span>
+          <span class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" disabled {% if equipo.teclado %}checked{% endif %}>
+            <label class="form-check-label">Teclado</label>
+          </span>
+        </div>
+      </div>
+      <div class="col-md-12">
+        <label class="form-label mb-0"><strong>Observaciones:</strong></label>
+        <div>{{ equipo.observaciones or '—' }}</div>
+      </div>
+      <a href="{{ url_for('edit_device', tag=tag) }}" class="btn btn-outline-primary ms-2">
+      <i class="bi bi-pencil"></i> Editar
+      </a>
+    </div>
+  </div>
+</div>
 <div class="row g-4">
   <!-- Formulario agregar cambio -->
-  <div class="col-lg-5">
+  <div class="col-lg-4">
     <div class="card shadow-sm">
       <div class="card-header bg-white"><strong>Agregar cambio</strong></div>
       <div class="card-body">
         <form method="post" class="row g-3">
           <div class="col-12">
             <label class="form-label">Tipo de cambio *</label>
-            <input name="tipo" class="form-control" required placeholder="Reemplazo HDD por SSD">
+            <input name="tipo" class="form-control" required placeholder="">
           </div>
           <div class="col-md-6">
-            <label class="form-label">Fecha (ISO opcional)</label>
+            <label class="form-label">Fecha </label>
             <input name="fecha" class="form-control" placeholder="YYYY-MM-DDTHH:MM">
           </div>
           <div class="col-md-6">
@@ -46,36 +93,105 @@
     </div>
   </div>
 
-  <!-- Historial -->
-  <div class="col-lg-7">
-    <div class="card shadow-sm">
-      <div class="card-header bg-white"><strong>Historial</strong></div>
-      <div class="card-body p-0">
-        <div class="table-responsive">
-          <table class="table table-sm table-striped mb-0 align-middle">
-            <thead class="table-light">
-              <tr>
-                <th style="width: 170px;">Fecha</th>
-                <th>Tipo</th>
-                <th>Descripción</th>
-                <th style="width: 140px;">Registrado por</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for h in historial %}
-                <tr>
-                  <td>{{ h.FechaCambio or '—' }}</td>
-                  <td>{{ h.TipoCambio or '—' }}</td>
-                  <td>{{ h.Descripcion or '—' }}</td>
-                  <td>{{ h.RegistradoPor or '—' }}</td>
-                </tr>
-              {% else %}
-                <tr><td colspan="4" class="text-center text-muted py-4">Sin cambios</td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
+  <!-- Reasignar -->
+  <div class="col-lg-4">
+    <div class="card shadow-sm mt-4">
+      <div class="card-header bg-white"><strong>Reasignar equipo</strong></div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('device_reassign', tag=tag) }}" class="row g-3">
+          <div class="col-12">
+            <label class="form-label">Nueva persona *</label>
+            <input name="nueva_persona" class="form-control" placeholder="" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Cargo </label>
+            <input name="cargo" class="form-control" placeholder="">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Fecha </label>
+            <input name="fecha" class="form-control" placeholder="YYYY-MM-DDTHH:MM">
+          </div>
+          <div class="col-12">
+            <label class="form-label">Descripción </label>
+            <input name="descripcion" class="form-control"
+                   placeholder="">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Registrado por</label>
+            <input name="registrado_por" class="form-control" value="Mel">
+          </div>
+          <div class="col-12">
+            <button class="btn btn-outline-primary w-100">
+              <i class="bi bi-people"></i> Reasignar
+            </button>
+          </div>
+        </form>
       </div>
+    </div>
+  </div>
+
+  <!-- Estado / Baja -->
+  <div class="col-lg-4">
+    <div class="card shadow-sm mt-4">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <strong>Estado del equipo</strong>
+        <span class="badge {{ 'text-bg-danger' if (historial and historial[0].get('Estado','ACTIVO')=='BAJA') else 'text-bg-success' }}">
+          {{ historial[0].get('Estado','ACTIVO') if historial else 'ACTIVO' }}
+        </span>
+      </div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('device_baja', tag=tag) }}" class="row g-3">
+          <div class="col-12">
+            <label class="form-label">Motivo de baja</label>
+            <input name="motivo" class="form-control" placeholder="">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Fecha de baja </label>
+            <input name="fecha" class="form-control" placeholder="YYYY-MM-DDTHH:MM">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Registrado por</label>
+            <input name="registrado_por" class="form-control" value="Mel">
+          </div>
+          <div class="col-12">
+            <button class="btn btn-outline-danger w-100"
+                    onclick="return confirm('¿Confirmas marcar este equipo en BAJA?');">
+              <i class="bi bi-archive"></i> Dar de baja
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Historial -->
+<div class="card shadow-sm mt-4">
+  <div class="card-header bg-white"><strong>Historial</strong></div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm table-striped mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th style="width: 170px;">Fecha</th>
+            <th>Tipo</th>
+            <th>Descripción</th>
+            <th style="width: 140px;">Registrado por</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for h in historial %}
+            <tr>
+              <td>{{ h.FechaCambio or '—' }}</td>
+              <td>{{ h.TipoCambio or '—' }}</td>
+              <td>{{ h.Descripcion or '—' }}</td>
+              <td>{{ h.RegistradoPor or '—' }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="4" class="text-center text-muted py-4">Sin cambios</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
   </div>
 </div>

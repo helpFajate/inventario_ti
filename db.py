@@ -81,23 +81,27 @@ def sp_historial_por_persona(nombre):
 
 # ---------- Consultas directas sobre la vista ----------
 
-def query_dispositivos(filtro_tag=None, filtro_persona=None):
+def query_dispositivos(filtro_tag=None, filtro_persona=None, solo_activos=True):
     conn = get_connection()
     cur = conn.cursor()
 
     sql = """
     SELECT
         e.EquipoId,
-        e.Tag AS Activo,               -- <== devolvemos 'Tag' (no 'Activo')
+        LTRIM(RTRIM(e.Tag)) AS Tag,
         e.Modelo,
         e.Serial,
         e.Ubicacion,
+        e.Estado  AS estado,
+        e.FechaBaja AS fechabaja,
         pa.Nombre AS PersonaAsignada
     FROM ti.Equipo e
     LEFT JOIN ti.Persona pa ON pa.PersonaId = e.PersonaAsignadaId
     WHERE e.Tag IS NOT NULL AND LTRIM(RTRIM(e.Tag)) <> ''
     """
     params = []
+    if solo_activos:
+        sql += " AND (e.Estado IS NULL OR e.Estado <> 'BAJA')"
     if filtro_tag:
         sql += " AND e.Tag LIKE ?"
         params.append(f"%{filtro_tag}%")
@@ -112,6 +116,7 @@ def query_dispositivos(filtro_tag=None, filtro_persona=None):
     rows = [dict(zip(cols, r)) for r in cur.fetchall()]
     cur.close(); conn.close()
     return rows
+
 
 
 def historial_por_equipo(tag):
@@ -165,3 +170,111 @@ def historial_por_equipo(tag):
         print(" ejemplo:", {k: rows[0].get(k) for k in ("Tag","CambioId","TipoCambio","FechaCambio","RegistradoPor")})
 
     return rows
+
+def sp_equipo_reasignar(tag, nueva_persona, cargo=None, fecha=None, registrado_por='TI', descripcion=None):
+    # normaliza fecha
+    import datetime as _dt
+    parsed = None
+    if fecha:
+        txt = fecha.replace('T', ' ')
+        for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%d'):
+            try:
+                parsed = _dt.datetime.strptime(txt, fmt); break
+            except ValueError:
+                pass
+
+    conn = get_connection(); cur = conn.cursor()
+    cur.execute("""
+        EXEC ti.sp_Equipo_Reasignar
+            @Tag=?, @NuevaPersona=?, @Cargo=?, @FechaCambio=?, @RegistradoPor=?, @Descripcion=?;
+    """, (tag, nueva_persona, cargo, parsed, registrado_por, descripcion))
+    conn.commit(); cur.close(); conn.close()
+
+
+def sp_equipo_dar_baja(tag, motivo=None, fecha_baja=None, registrado_por='TI'):
+    import datetime as _dt
+    parsed = None
+    if fecha_baja:
+        txt = fecha_baja.replace('T', ' ')
+        for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%d'):
+            try:
+                parsed = _dt.datetime.strptime(txt, fmt); break
+            except ValueError:
+                pass
+
+    conn = get_connection(); cur = conn.cursor()
+    cur.execute("""
+        EXEC ti.sp_Equipo_DarBaja
+            @Tag=?, @Motivo=?, @FechaBaja=?, @RegistradoPor=?;
+    """, (tag, motivo, parsed, registrado_por))
+    conn.commit(); cur.close(); conn.close()
+
+def obtener_equipo_por_tag(tag):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT
+            e.EquipoId,
+            LTRIM(RTRIM(e.Tag)) AS tag,
+            e.Modelo AS modelo,
+            e.Marca AS marca,
+            e.Serial AS serial,
+            e.Ubicacion AS ubicacion,
+            e.Cargador AS cargador,
+            e.Maletin AS maletin,
+            e.Mouse AS mouse,
+            e.Teclado AS teclado,
+            e.Observaciones AS observaciones
+        FROM ti.Equipo e
+        WHERE LTRIM(RTRIM(e.Tag)) = ?
+    """, (tag,))
+    row = cur.fetchone()
+    equipo = dict(zip([c[0] for c in cur.description], row)) if row else {}
+    cur.close(); conn.close()
+    return equipo
+
+def obtener_equipo_por_tag(tag):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT
+            e.EquipoId,
+            LTRIM(RTRIM(e.Tag)) AS tag,
+            e.Modelo AS modelo,
+            e.Marca AS marca,
+            e.Serial AS serial,
+            e.Ubicacion AS ubicacion,
+            e.Cargador AS cargador,
+            e.Maletin AS maletin,
+            e.Mouse AS mouse,
+            e.Teclado AS teclado,
+            e.Observaciones AS observaciones
+        FROM ti.Equipo e
+        WHERE LTRIM(RTRIM(e.Tag)) = ?
+    """, (tag,))
+    row = cur.fetchone()
+    equipo = dict(zip([c[0] for c in cur.description], row)) if row else {}
+    cur.close(); conn.close()
+    return equipo
+
+def equipo_upsert_completo(tag, marca, modelo, serial, ubicacion, persona_asignada,
+                           cargador, maletin, mouse, teclado, observaciones):
+    conn = get_connection()
+    cur = conn.cursor()
+    # Si tienes PersonaAsignadaId, deberías buscarla por nombre o pasar el ID
+    cur.execute("""
+        MERGE ti.Equipo AS target
+        USING (SELECT ? AS Tag) AS source
+        ON (target.Tag = source.Tag)
+        WHEN MATCHED THEN
+            UPDATE SET
+                Marca=?, Modelo=?, Serial=?, Ubicacion=?, PersonaAsignadaId=NULL,
+                Cargador=?, Maletin=?, Mouse=?, Teclado=?, Observaciones=?
+        WHEN NOT MATCHED THEN
+            INSERT (Tag, Marca, Modelo, Serial, Ubicacion, PersonaAsignadaId, Cargador, Maletin, Mouse, Teclado, Observaciones)
+            VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?);
+    """, (
+        tag, marca, modelo, serial, ubicacion, cargador, maletin, mouse, teclado, observaciones,
+        tag, marca, modelo, serial, ubicacion, cargador, maletin, mouse, teclado, observaciones
+    ))
+    conn.commit(); cur.close(); conn.close()

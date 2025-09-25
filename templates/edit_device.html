@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Editar equipo {{ tag }} - Inventario TI{% endblock %}
+{% block content %}
+
+<h2 class="mb-4">Editar equipo <span class="badge text-bg-secondary">{{ tag }}</span></h2>
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <form method="post">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">Marca</label>
+          <input name="marca" class="form-control" value="{{ equipo.marca or '' }}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Modelo</label>
+          <input name="modelo" class="form-control" value="{{ equipo.modelo or '' }}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Serial</label>
+          <input name="serial" class="form-control" value="{{ equipo.serial or '' }}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Ubicación</label>
+          <input name="ubicacion" class="form-control" value="{{ equipo.ubicacion or '' }}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Persona asignada (nombre)</label>
+          <input name="persona_asignada" class="form-control" value="{{ equipo.personaasignada or '' }}">
+        </div>
+        <div class="col-md-12">
+          <label class="form-label">Accesorios</label><br>
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" name="cargador" value="1" id="cargador"
+                   {% if equipo.cargador %}checked{% endif %}>
+            <label class="form-check-label" for="cargador">Cargador</label>
+          </div>
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" name="maletin" value="1" id="maletin"
+                   {% if equipo.maletin %}checked{% endif %}>
+            <label class="form-check-label" for="maletin">Maletín</label>
+          </div>
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" name="mouse" value="1" id="mouse"
+                   {% if equipo.mouse %}checked{% endif %}>
+            <label class="form-check-label" for="mouse">Mouse</label>
+          </div>
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" name="teclado" value="1" id="teclado"
+                   {% if equipo.teclado %}checked{% endif %}>
+            <label class="form-check-label" for="teclado">Teclado</label>
+          </div>
+        </div>
+        <div class="col-md-12">
+          <label class="form-label">Observaciones</label>
+          <textarea name="observaciones" class="form-control" rows="2">{{ equipo.observaciones or '' }}</textarea>
+        </div>
+      </div>
+      <button class="btn btn-success mt-3" type="submit">
+        <i class="bi bi-check-circle"></i> Guardar cambios
+      </button>
+      <a href="{{ url_for('device_view', tag=tag) }}" class="btn btn-outline-secondary mt-3 ms-2">
+        <i class="bi bi-arrow-left"></i> Cancelar
+      </a>
+    </form>
+  </div>
+</div>
+{% endblock %}
