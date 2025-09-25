@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Inicio - Inventario TI{% endblock %}
+{% block content %}
+
+<div style="margin-left: 176px; margin-right: 32px;">
+
+  <!-- Buscador -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      <form class="row g-2 align-items-end" method="get">
+        <div class="col-md-4">
+          <label class="form-label">Buscar por Activo</label>
+          <input name="q" class="form-control" placeholder="Ej: 0001907" value="{{ q }}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Buscar por persona asignada</label>
+          <input name="person" class="form-control" placeholder="Ej: Ana Pérez" value="{{ person }}">
+        </div>
+        <div class="col-md-2">
+          <button class="btn btn-primary w-100">
+            <i class="bi bi-search"></i> Buscar
+          </button>
+        </div>
+        <div class="col-md-2 text-md-end">
+          <a class="btn btn-success w-100" href="{{ url_for('new_device') }}">
+            <i class="bi bi-plus-circle"></i> Nuevo equipo
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Tabla de equipos -->
+  <div class="card shadow-sm">
+    <div class="card-header bg-white">
+      <strong>Equipos</strong>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-striped table-hover mb-0 align-middle">
+          <thead class="table-light">
+            <tr>
+              <th style="width: 160px;">Activo</th>
+              <th>Modelo</th>
+              <th>Persona asignada</th>
+              <th>Ubicación</th>
+              <th style="width: 110px;"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in dispositivos %}
+              <tr>
+                <td><span class="badge text-bg-secondary">{{ r.Tag }}</span></td>
+                <td>{{ r.Modelo or '—' }}</td>
+                <td>{{ r.PersonaAsignada or 'Sin asignar' }}</td>
+                <td>{{ r.Ubicacion or '—' }}</td>
+                <td class="text-end">
+                  <a class="btn btn-sm btn-outline-primary" href="{{ url_for('device_view', tag=r.Tag) }}">
+                    <i class="bi bi-eye"></i> Ver
+                  </a>
+                </td>
+              </tr>
+            {% else %}
+              <tr><td colspan="5" class="text-center text-muted py-4">Sin resultados</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  {% if resultados_persona is defined %}
+    <div class="card shadow-sm mt-4">
+      <div class="card-header bg-white">
+        <strong>Historial por persona</strong>
+      </div>
+      <div class="card-body">
+        {% if resultados_persona %}
+          <ul class="list-group">
+            {% for row in resultados_persona %}
+              <li class="list-group-item">
+                <span class="text-muted">[{{ row.FechaCambio }}]</span>
+                <span class="badge text-bg-secondary">{{ row.Tag }}</span>
+                — <strong>{{ row.TipoCambio }}</strong>
+                {% if row.PersonaCambio %} <span class="text-muted">({{ row.PersonaCambio }})</span>{% endif %}
+                — {{ row.Descripcion }}
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="text-muted">Sin historial</div>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

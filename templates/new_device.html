@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Nuevo equipo - Inventario TI{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="mb-0">Registrar / Actualizar equipo</h2>
+  <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i> Volver
+  </a>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <form method="post" class="row g-3">
+      <div class="col-md-4">
+        <label class="form-label">Activo</label>
+        <input name="tag" class="form-control" required placeholder="Ej: 0001907">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Modelo</label>
+        <input name="modelo" class="form-control" placeholder="Ej: HP ProBook 440 G3">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Serial</label>
+        <input name="serial" class="form-control">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Ubicación</label>
+        <input name="ubicacion" class="form-control" placeholder="Ej: Bogotá - Oficina">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Persona asignada (nombre)</label>
+        <input name="persona" class="form-control" placeholder="Ej: Ana Pérez">
+      </div>
+
+      <div class="col-md-6">
+       <label class="form-label">Cargo</label>
+       <input name="cargo" class="form-control" placeholder="Ej: Coordinadora TI">
+      </div>
+      <div class="col-12">
+        <button class="btn btn-success">
+          <i class="bi bi-check2-circle"></i> Guardar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

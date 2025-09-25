@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Equipo {{ tag }} - Inventario TI{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="mb-0">Activo <span class="badge text-bg-secondary">{{ tag }}</span></h2>
+  <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i> Volver
+  </a>
+</div>
+
+<div class="row g-4">
+  <!-- Formulario agregar cambio -->
+  <div class="col-lg-5">
+    <div class="card shadow-sm">
+      <div class="card-header bg-white"><strong>Agregar cambio</strong></div>
+      <div class="card-body">
+        <form method="post" class="row g-3">
+          <div class="col-12">
+            <label class="form-label">Tipo de cambio *</label>
+            <input name="tipo" class="form-control" required placeholder="Reemplazo HDD por SSD">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Fecha (ISO opcional)</label>
+            <input name="fecha" class="form-control" placeholder="YYYY-MM-DDTHH:MM">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Persona relacionada</label>
+            <input name="persona_rel" class="form-control" placeholder="Usuario final">
+          </div>
+          <div class="col-12">
+            <label class="form-label">Descripción</label>
+            <textarea name="descripcion" class="form-control" rows="3"></textarea>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Registrado por</label>
+            <input name="registrado_por" class="form-control" value="Mel">
+          </div>
+          <div class="col-12">
+            <button class="btn btn-success w-100">
+              <i class="bi bi-save"></i> Registrar cambio
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Historial -->
+  <div class="col-lg-7">
+    <div class="card shadow-sm">
+      <div class="card-header bg-white"><strong>Historial</strong></div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm table-striped mb-0 align-middle">
+            <thead class="table-light">
+              <tr>
+                <th style="width: 170px;">Fecha</th>
+                <th>Tipo</th>
+                <th>Descripción</th>
+                <th style="width: 140px;">Registrado por</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for h in historial %}
+                <tr>
+                  <td>{{ h.FechaCambio or '—' }}</td>
+                  <td>{{ h.TipoCambio or '—' }}</td>
+                  <td>{{ h.Descripcion or '—' }}</td>
+                  <td>{{ h.RegistradoPor or '—' }}</td>
+                </tr>
+              {% else %}
+                <tr><td colspan="4" class="text-center text-muted py-4">Sin cambios</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

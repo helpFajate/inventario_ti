@@ -1,0 +1,108 @@
+:root {
+  --vivel-primary: #00b9e4;   /* Azul celeste del logo */
+  --vivel-secondary: #8dc63f; /* Verde lima del logo */
+  --vivel-bg: #f7fafc;        /* Fondo suave */
+  --vivel-card: #ffffff;
+  --vivel-table-head: #eaf7fb;
+  --vivel-table-row: #f2fbfd;
+  --vivel-text: #4d4d4f;      /* Gris oscuro */
+}
+
+/* Fondo general */
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  background: var(--vivel-bg);
+  color: var(--vivel-text);
+}
+
+/* Navbar */
+.navbar {
+  background: var(--vivel-primary) !important;
+  border-radius: 0 0 1.5rem 1.5rem;
+  box-shadow: 0 2px 12px 0 rgba(0,185,228,0.08);
+}
+
+/* Tarjetas */
+.card {
+  border-radius: 1.2rem;
+  background: var(--vivel-card);
+  box-shadow: 0 2px 16px 0 rgba(0,185,228,0.06);
+  border: none;
+}
+
+/* Tablas */
+.table {
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: var(--vivel-card);
+}
+.table thead {
+  background: var(--vivel-table-head);
+}
+.table-striped > tbody > tr:nth-of-type(odd) {
+  background: var(--vivel-table-row);
+}
+
+/* Botones */
+.btn-primary, .btn-success {
+  border: none;
+  font-size: 1.08rem;
+  padding: 0.65rem 1.3rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px 0 rgba(0,185,228,0.07);
+  transition: background 0.2s;
+}
+.btn-primary {
+  background: var(--vivel-primary);
+  color: #fff;
+}
+.btn-primary:hover, .btn-primary:focus {
+  background: #009ec2;
+}
+.btn-success {
+  background: var(--vivel-secondary);
+  color: #fff;
+}
+.btn-success:hover, .btn-success:focus {
+  background: #6ea32d;
+}
+
+/* Inputs */
+input.form-control, textarea.form-control {
+  border-radius: 0.5rem;
+  border: 1.5px solid #e0e6ed;
+  background: #fafdff;
+  transition: border 0.2s;
+}
+input.form-control:focus, textarea.form-control:focus {
+  border-color: var(--vivel-primary);
+  box-shadow: 0 0 0 2px #00b9e433;
+}
+
+/* Badges */
+.badge.text-bg-secondary {
+  background: var(--vivel-primary);
+  color: #fff;
+  font-size: 1rem;
+  padding: 0.5em 1em;
+  border-radius: 0.5em;
+  letter-spacing: 0.03em;
+}
+
+/* Títulos */
+h2, .card-header strong {
+  color: var(--vivel-primary);
+}
+
+/* Links */
+a {
+  color: var(--vivel-primary);
+}
+a:hover {
+  color: var(--vivel-secondary);
+}
+
+/* Ajustes menores */
+.table thead th { font-weight: 600; }
+.alert-success { background: #e6f9f2; color: var(--vivel-secondary); border: none; }
+.alert-danger { background: #ffeaea; color: #b8002e; border: none; }
