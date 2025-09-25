@@ -50,12 +50,12 @@
           <tbody>
             {% for r in dispositivos %}
               <tr>
-                <td><span class="badge text-bg-secondary">{{ r.Tag }}</span></td>
+                <td><span class="badge text-bg-secondary">{{ r.Activo }}</span></td>
                 <td>{{ r.Modelo or '—' }}</td>
                 <td>{{ r.PersonaAsignada or 'Sin asignar' }}</td>
                 <td>{{ r.Ubicacion or '—' }}</td>
                 <td class="text-end">
-                  <a class="btn btn-sm btn-outline-primary" href="{{ url_for('device_view', tag=r.Tag) }}">
+                  <a class="btn btn-sm btn-outline-primary" href="{{ url_for('device_view', tag=r.Activo) }}">
                     <i class="bi bi-eye"></i> Ver
                   </a>
                 </td>

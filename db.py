@@ -88,7 +88,7 @@ def query_dispositivos(filtro_tag=None, filtro_persona=None):
     sql = """
     SELECT
         e.EquipoId,
-        e.Tag AS Activo,               -- << alias aquí
+        e.Tag AS Activo,               -- <== devolvemos 'Tag' (no 'Activo')
         e.Modelo,
         e.Serial,
         e.Ubicacion,
@@ -98,7 +98,6 @@ def query_dispositivos(filtro_tag=None, filtro_persona=None):
     WHERE e.Tag IS NOT NULL AND LTRIM(RTRIM(e.Tag)) <> ''
     """
     params = []
-
     if filtro_tag:
         sql += " AND e.Tag LIKE ?"
         params.append(f"%{filtro_tag}%")
@@ -116,16 +115,9 @@ def query_dispositivos(filtro_tag=None, filtro_persona=None):
 
 
 def historial_por_equipo(tag):
-    """
-    Devuelve historial por Activo (Tag).
-    - Trim a ambos lados por si hay espacios.
-    - Ordena con NULLS al final para que no rompa si no hay cambios.
-    """
     safe_tag = (tag or "").strip()
-
     conn = get_connection()
     cur = conn.cursor()
-
     cur.execute("""
         SELECT *
         FROM ti.v_EquipoHistorial
@@ -137,12 +129,39 @@ def historial_por_equipo(tag):
     """, (safe_tag,))
 
     cols = [c[0] for c in cur.description]
-    rows = [dict(zip(cols, r)) for r in cur.fetchall()]
-
-    # --- debug al terminal ---
-    print(f"[historial_por_equipo] tag={safe_tag!r} filas={len(rows)}")
-    if rows:
-        print("  ejemplo:", {k: rows[0].get(k) for k in ("Tag","CambioId","TipoCambio","FechaCambio","RegistradoPor")})
-
+    raw = [dict(zip(cols, r)) for r in cur.fetchall()]
     cur.close(); conn.close()
+
+    # Normaliza las claves a formato esperado por Jinja (camel-case)
+    norm_map = {
+        'tag': 'Tag',
+        'equipoid': 'EquipoId',
+        'modelo': 'Modelo',
+        'serial': 'Serial',
+        'ubicacion': 'Ubicacion',
+        'personaasignadaid': 'PersonaAsignadaId',
+        'personaasignada': 'PersonaAsignada',
+        'cambioid': 'CambioId',
+        'tipocambio': 'TipoCambio',
+        'descripcion': 'Descripcion',
+        'fechacambio': 'FechaCambio',
+        'registradopor': 'RegistradoPor',
+        'fecharegistro': 'FechaRegistro',
+        'personacambioid': 'PersonaCambioId',
+        'personacambio': 'PersonaCambio',
+    }
+
+    rows = []
+    for r in raw:
+        norm = {}
+        for k, v in r.items():
+            key = norm_map.get(k.lower(), k)
+            norm[key] = v
+        rows.append(norm)
+
+    # Debug para consola
+    print(f"[historial_por_equipo] tag={safe_tag!r}, filas={len(rows)}")
+    if rows:
+        print(" ejemplo:", {k: rows[0].get(k) for k in ("Tag","CambioId","TipoCambio","FechaCambio","RegistradoPor")})
+
     return rows
