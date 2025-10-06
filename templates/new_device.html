@@ -1,64 +1,102 @@
 {% extends "base.html" %}
+{% block title %}Registrar equipo - Inventario TI{% endblock %}
 {% block content %}
 
-<div style="margin-left: 176px; margin-right: 32px;">
-  <div class="card shadow-sm">
-    <div class="card-body">
-      <h2 class="mb-4">Registrar / Actualizar equipo</h2>
-      <form method="post">
-        <div class="row g-3">
-          <div class="col-md-4">
-            <label class="form-label">Activo</label>
-            <input type="text" name="tag" class="form-control">
-          </div>
-          <div class="col-md-4">
-            <label class="form-label">Marca</label>
-            <input type="text" name="marca" class="form-control">
-          </div>
-          <div class="col-md-4">
-            <label class="form-label">Modelo</label>
-            <input type="text" name="modelo" class="form-control">
+<div class="card shadow-sm">
+  <div class="card-body">
+    <h3 class="mb-4" style="color:var(--vivel-primary)">Registrar equipo</h3>
+
+    <form method="post" action="{{ url_for('new_device') }}" enctype="multipart/form-data">
+      <div class="row mb-3">
+        <div class="col-md-4">
+          <label for="tipo_equipo" class="form-label">Equipo entregado</label>
+          <input type="text" id="tipo_equipo" name="tipo_equipo" class="form-control"
+            placeholder="Ej: CPU + Pantalla, Portátil, Impresora..." />
+        </div>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">Activo</label>
+          <input name="tag" class="form-control" required>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">Marca</label>
+          <input name="marca" class="form-control">
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">Modelo</label>
+          <input name="modelo" class="form-control">
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">Serial</label>
+          <input name="serial" class="form-control">
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">Ubicación</label>
+          <input name="ubicacion" class="form-control">
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">Persona asignada (nombre)</label>
+          <input name="persona_asignada" class="form-control">
+        </div>
+
+        <div class="col-12">
+          <label class="form-label">Accesorios</label>
+          <div>
+            <label class="me-3"><input type="checkbox" name="cargador"> Cargador</label>
+            <label class="me-3"><input type="checkbox" name="maletin"> Maletín</label>
+            <label class="me-3"><input type="checkbox" name="mouse"> Mouse</label>
+            <label class="me-3"><input type="checkbox" name="teclado"> Teclado</label>
           </div>
         </div>
 
-        <div class="row g-3 mt-2">
-          <div class="col-md-4">
-            <label class="form-label">Serial</label>
-            <input type="text" name="serial" class="form-control">
-          </div>
-          <div class="col-md-4">
-            <label class="form-label">Ubicación</label>
-            <input type="text" name="ubicacion" class="form-control">
-          </div>
-          <div class="col-md-4">
-            <label class="form-label">Persona asignada (nombre)</label>
-            <input type="text" name="persona_asignada" class="form-control">
-          </div>
-        </div>
-
-        <div class="mt-3">
-          <label class="form-label">Accesorios</label><br>
-          <label><input type="checkbox" name="cargador"> Cargador</label>
-          <label><input type="checkbox" name="maletin"> Maletín</label>
-          <label><input type="checkbox" name="mouse"> Mouse</label>
-          <label><input type="checkbox" name="teclado"> Teclado</label>
-        </div>
-
-        <div class="mt-3">
+        <div class="col-12">
           <label class="form-label">Observaciones</label>
-          <textarea name="observaciones" class="form-control"></textarea>
+          <textarea name="observaciones" class="form-control" rows="3"></textarea>
         </div>
 
-        <div class="d-flex justify-content-between mt-4">
+        <!-- === Archivo principal  === -->
+        <div class="col-12">
+          <hr>
+          <h5 class="mb-2">Archivo principal </h5>
+          <div class="row g-2">
+            <div class="col-lg-8">
+              <label class="form-label small text-muted">Pega la ruta UNC de un archivo dentro de la carpeta de
+                red</label>
+              <input name="ruta_principal" class="form-control"
+                placeholder="\\itzamna\DATAUSERS\ADM Y SISTEMAS\Entrega Equipos\mi_acta.xlsx">
+              <div class="form-text">
+                Debe estar dentro de <code>{{ '\\\\itzamna\\DATAUSERS\\ADM Y SISTEMAS\\Entrega Equipos' }}</code>.
+                Extensiones permitidas: {{ 'pdf, jpg, jpeg, png, xlsx, xls' }}.
+              </div>
+            </div>
+
+            {% if enable_upload %}
+            <div class="col-lg-4">
+              <label class="form-label small text-muted">o sube el archivo (máx. 5MB)</label>
+              <input type="file" name="archivo" class="form-control">
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        <!-- ================================ -->
+        <div class="mt-4 d-flex justify-content-between">
           <button type="submit" class="btn btn-success">
             <i class="bi bi-check-circle"></i> Guardar
           </button>
-          <a href="{{ url_for('index') }}" class="btn btn-primary">
+          <a href="{{ url_for('index') }}" class="btn btn-secondary">
             ← Volver
           </a>
         </div>
-      </form>
-    </div>
+
+      </div>
+    </form>
   </div>
 </div>
 

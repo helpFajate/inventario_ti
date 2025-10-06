@@ -315,3 +315,32 @@ def equipo_upsert_completo(tag, marca, modelo, serial, ubicacion, persona_asigna
 
     conn.commit()
     cur.close(); conn.close()
+
+def archivo_principal_get(tag: str):
+    conn = get_connection(); cur = conn.cursor()
+    cur.execute("""
+        SELECT TOP 1 Ruta, Nombre
+        FROM ti.EquipoArchivo
+        WHERE Tag = ? AND EsPrincipal = 1
+        ORDER BY EquipoArchivoId DESC
+    """, (tag,))
+    row = cur.fetchone()
+    cur.close(); conn.close()
+    if row:
+        return {"ruta": row[0], "nombre": row[1]}
+    return None
+
+def archivo_principal_set(tag: str, ruta: str, nombre: str):
+    conn = get_connection(); cur = conn.cursor()
+    # Quita principal previo
+    cur.execute("""
+        UPDATE ti.EquipoArchivo
+           SET EsPrincipal = 0
+         WHERE Tag = ? AND EsPrincipal = 1
+    """, (tag,))
+    # Inserta nuevo principal
+    cur.execute("""
+        INSERT INTO ti.EquipoArchivo(Tag, Ruta, Nombre, EsPrincipal)
+        VALUES(?, ?, ?, 1)
+    """, (tag, ruta, nombre))
+    conn.commit(); cur.close(); conn.close()

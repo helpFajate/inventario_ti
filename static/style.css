@@ -1,11 +1,14 @@
 :root {
-  --vivel-primary: #00b9e4;   /* Azul celeste del logo */
-  --vivel-secondary: #8dc63f; /* Verde lima del logo */
+  --vivel-primary: #00b9e4;   /* Azul celeste del logo / barra */
+  --vivel-primary-dark: #009ec2;
+  --vivel-secondary: #8dc63f; /* Verde */
   --vivel-bg: #f7fafc;        /* Fondo suave */
   --vivel-card: #ffffff;
   --vivel-table-head: #eaf7fb;
   --vivel-table-row: #f2fbfd;
   --vivel-text: #4d4d4f;      /* Gris oscuro */
+  --vivel-danger: #dc3545;
+  --vivel-danger-dark: #b02a37;
 }
 
 /* Fondo general */
@@ -13,13 +16,13 @@ body {
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   background: var(--vivel-bg);
   color: var(--vivel-text);
+  margin: 0;
 }
 
-/* Navbar */
-.navbar {
+/* Barra azul del header con bordes redondeados */
+.vivel-navbar {
   background: var(--vivel-primary) !important;
-  border-radius: 0 0 1.5rem 1.5rem;
-  box-shadow: 0 2px 12px 0 rgba(0,185,228,0.08);
+  border-radius: 0 0 1.2rem 1.2rem;
 }
 
 /* Tarjetas */
@@ -43,7 +46,7 @@ body {
   background: var(--vivel-table-row);
 }
 
-/* Botones */
+/* Botones Bootstrap tuneados */
 .btn-primary, .btn-success {
   border: none;
   font-size: 1.08rem;
@@ -52,20 +55,27 @@ body {
   box-shadow: 0 2px 8px 0 rgba(0,185,228,0.07);
   transition: background 0.2s;
 }
-.btn-primary {
-  background: var(--vivel-primary);
+.btn-primary { background: var(--vivel-primary); color: #fff; }
+.btn-primary:hover, .btn-primary:focus { background: var(--vivel-primary-dark); }
+.btn-success { background: var(--vivel-secondary); color: #fff; }
+.btn-success:hover, .btn-success:focus { background: #6ea32d; }
+
+/* Botones corporativos */
+.btn-azul, .btn-rojo {
+  border: none;
+  font-size: 1.08rem;
+  padding: 0.65rem 1.3rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px 0 rgba(0,185,228,0.07);
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
   color: #fff;
 }
-.btn-primary:hover, .btn-primary:focus {
-  background: #009ec2;
-}
-.btn-success {
-  background: var(--vivel-secondary);
-  color: #fff;
-}
-.btn-success:hover, .btn-success:focus {
-  background: #6ea32d;
-}
+.btn-azul { background: var(--vivel-primary); }
+.btn-azul:hover, .btn-azul:focus { background: var(--vivel-primary-dark); }
+.btn-rojo { background: var(--vivel-danger); }
+.btn-rojo:hover, .btn-rojo:focus { background: var(--vivel-danger-dark); }
+.btn-azul.btn-sm, .btn-rojo.btn-sm { font-size: .9rem; padding: .4rem .8rem; border-radius: .45rem; }
+.btn i { margin-right: .35rem; }
 
 /* Inputs */
 input.form-control, textarea.form-control {
@@ -79,7 +89,7 @@ input.form-control:focus, textarea.form-control:focus {
   box-shadow: 0 0 0 2px #00b9e433;
 }
 
-/* Badges */
+/* Badges y títulos */
 .badge.text-bg-secondary {
   background: var(--vivel-primary);
   color: #fff;
@@ -88,75 +98,34 @@ input.form-control:focus, textarea.form-control:focus {
   border-radius: 0.5em;
   letter-spacing: 0.03em;
 }
-
-/* Títulos */
-h2, .card-header strong {
-  color: var(--vivel-primary);
-}
+h2, .card-header strong { color: var(--vivel-primary); }
 
 /* Links */
-a {
-  color: var(--vivel-primary);
-}
-a:hover {
-  color: var(--vivel-secondary);
-}
+a { color: var(--vivel-primary); }
+a:hover { color: var(--vivel-secondary); }
 
-/* Ajustes menores */
+/* Alertas */
 .table thead th { font-weight: 600; }
 .alert-success { background: #e6f9f2; color: var(--vivel-secondary); border: none; }
 .alert-danger { background: #ffeaea; color: #b8002e; border: none; }
 
-/* -------- Botones corporativos -------- */
+/* Espaciado superior unificado (evita el “salto” distinto entre páginas) */
+main.container { margin-top: 1.25rem !important; }
 
-/* paleta extendida */
-:root {
-  --vivel-primary-dark: #009ec2;   /* hover azul */
-  --vivel-danger:       #dc3545;   /* rojo sólido */
-  --vivel-danger-dark:  #b02a37;   /* hover rojo */
-}
+/* Evita que algo meta márgenes raros al header */
+header .container { padding-left: 0; padding-right: 0; }
 
-/* base común (igual look & feel de tus .btn-primary/.btn-success) */
-.btn-azul,
-.btn-rojo {
-  border: none;
-  font-size: 1.08rem;
-  padding: 0.65rem 1.3rem;
-  border-radius: 0.5rem;
-  box-shadow: 0 2px 8px 0 rgba(0,185,228,0.07);
-  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
-  color: #fff;
+/* Tabs un poco más suaves */
+.nav-tabs .nav-link {
+  border: 0;
+  border-bottom: 3px solid transparent;
+  color: #4d4d4f;
 }
-
-/* Azul corporativo: mismo tono que la navbar */
-.btn-azul {
-  background: var(--vivel-primary);
+.nav-tabs .nav-link:hover {
+  border-color: #00b9e420;
 }
-.btn-azul:hover,
-.btn-azul:focus {
-  background: var(--vivel-primary-dark);
-  color: #fff;
-}
-
-/* Rojo sólido (para acciones peligrosas) */
-.btn-rojo {
-  background: var(--vivel-danger);
-}
-.btn-rojo:hover,
-.btn-rojo:focus {
-  background: var(--vivel-danger-dark);
-  color: #fff;
-}
-
-/* versión pequeña */
-.btn-azul.btn-sm,
-.btn-rojo.btn-sm {
-  font-size: .9rem;
-  padding: .4rem .8rem;
-  border-radius: .45rem;
-}
-
-/* Botón con icono: espacio entre icono y texto */
-.btn i {
-  margin-right: .35rem;
+.nav-tabs .nav-link.active {
+  color: #00b9e4;
+  border-color: #00b9e4;
+  font-weight: 600;
 }

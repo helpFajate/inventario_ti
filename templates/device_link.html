@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Vincular archivo – {{ tag }}{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="mb-0">Vincular archivo principal — <span class="badge text-bg-secondary">{{ tag }}</span></h2>
+  <a class="btn btn-outline-secondary" href="{{ url_for('device_view', tag=tag) }}">
+    <i class="bi bi-arrow-left"></i> Volver
+  </a>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    {% if principal %}
+      <div class="mb-3">
+        <div class="text-muted small">Archivo principal actual:</div>
+        <div class="fw-semibold">{{ principal.nombre }}</div>
+        <div class="text-muted">{{ principal.ruta }}</div>
+      </div>
+    {% else %}
+      <div class="text-muted">Este equipo no tiene un archivo principal vinculado.</div>
+    {% endif %}
+
+    <hr>
+
+    <form method="post" class="row g-3">
+      <div class="col-12">
+        <label class="form-label">Coincidencias por nombre (escaneadas en la carpeta de red)</label>
+        <div class="border rounded p-2" style="max-height: 320px; overflow:auto;">
+          {% if candidates and candidates|length > 0 %}
+            {% for c in candidates %}
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="token" id="c{{ loop.index }}" value="{{ c.token }}">
+                <label class="form-check-label" for="c{{ loop.index }}">
+                  <strong>{{ c.name }}</strong>
+                  <span class="text-muted">— {{ c.path }} — {{ (c.size/1024)|round(1) }} KB — {{ c.mtime }}</span>
+                </label>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div class="text-muted">No se encontraron coincidencias para “{{ tag }}”.</div>
+          {% endif %}
+        </div>
+        <div class="form-text">Puedes elegir una coincidencia o pegar la ruta manual abajo.</div>
+      </div>
+
+      <div class="col-12">
+        <label class="form-label">Ruta UNC manual </label>
+        <input name="ruta_manual" class="form-control" placeholder="\\itzamna\DATAUSERS\ADM Y SISTEMAS\Entrega Equipos\...\archivo.pdf">
+      </div>
+
+      <div class="col-12 d-flex justify-content-end gap-2">
+        <a class="btn btn-outline-secondary" href="{{ url_for('device_view', tag=tag) }}">Cancelar</a>
+        <button class="btn btn-azul"><i class="bi bi-link-45deg"></i> Vincular como principal</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

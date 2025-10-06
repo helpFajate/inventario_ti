@@ -11,20 +11,32 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 </head>
-<body class="bg-light">
-  <!-- NAVBAR -->
-  <div class="d-flex align-items-center" style="background: var(--vivel-bg); padding: 0.5rem 0 0.5rem 2rem;">
-    <img src="{{ url_for('static', filename='VIVELL MELINA (1).png') }}" alt="Logo Vivel" height="48" style="max-width:160px;">
-    <div class="flex-grow-1">
-      <nav class="navbar navbar-expand-lg navbar-dark" style="background: var(--vivel-primary); border-radius: 0 0 1.5rem 1.5rem; margin-left: 1.5rem;">
-        <div class="container justify-content-center">
-          <span class="navbar-brand mx-auto fw-bold" style="color:#fff; font-size:1.7rem;">Inventario TI</span>
-        </div>
-      </nav>
-    </div>
-  </div>
+<body>
 
-  <div class="container my-4">
+  <!-- HEADER: logo a la izquierda + barra azul ocupando el resto (como te gusta en /new) -->
+  <header class="py-2">
+    <div class="container">
+      <div class="d-flex align-items-center gap-3">
+        <!-- Logo -->
+        <img src="{{ url_for('static', filename='VIVELL MELINA (1).png') }}"
+             alt="Logo Vivel" height="48" style="max-width:160px;">
+
+        <!-- Barra azul estirada -->
+        <div class="flex-grow-1">
+          <nav class="navbar navbar-expand-lg navbar-dark shadow-sm vivel-navbar">
+            <div class="container justify-content-center px-0">
+              <span class="navbar-brand mx-auto fw-bold text-white" style="font-size:1.7rem;">
+                Inventario TI
+              </span>
+            </div>
+          </nav>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENIDO -->
+  <main class="container my-4">
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for cat,msg in messages %}
@@ -36,8 +48,30 @@
     {% endwith %}
 
     {% block content %}{% endblock %}
-  </div>
+  </main>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+  // Activar pestaña según el hash inicial (si existe)
+  (function () {
+    const hash = window.location.hash;
+    if (hash) {
+      const trigger = document.querySelector(`[data-bs-target="${hash}"]`);
+      if (trigger) {
+        const tab = new bootstrap.Tab(trigger);
+        tab.show();
+      }
+    }
+    // Mantener hash sincronizado al cambiar de pestaña
+    const tabs = document.querySelectorAll('#deviceTabs [data-bs-toggle="tab"]');
+    tabs.forEach(el => {
+      el.addEventListener('shown.bs.tab', e => {
+        const target = e.target.getAttribute('data-bs-target');
+        if (target) history.replaceState(null, '', target);
+      });
+    });
+  })();
+</script>
+
 </body>
 </html>
