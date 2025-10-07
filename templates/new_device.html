@@ -53,6 +53,8 @@
             <label class="me-3"><input type="checkbox" name="maletin"> Maletín</label>
             <label class="me-3"><input type="checkbox" name="mouse"> Mouse</label>
             <label class="me-3"><input type="checkbox" name="teclado"> Teclado</label>
+            <label class="me-3"><input type="checkbox" name="impresora"> Impresora</label>
+            <label class="me-3"><input type="checkbox" name="lector"> Lector</label>
           </div>
         </div>
 
@@ -62,42 +64,109 @@
         </div>
 
         <!-- === Archivo principal  === -->
-        <div class="col-12">
-          <hr>
-          <h5 class="mb-2">Archivo principal </h5>
-          <div class="row g-2">
-            <div class="col-lg-8">
-              <label class="form-label small text-muted">Pega la ruta UNC de un archivo dentro de la carpeta de
-                red</label>
-              <input name="ruta_principal" class="form-control"
-                placeholder="\\itzamna\DATAUSERS\ADM Y SISTEMAS\Entrega Equipos\mi_acta.xlsx">
-              <div class="form-text">
-                Debe estar dentro de <code>{{ '\\\\itzamna\\DATAUSERS\\ADM Y SISTEMAS\\Entrega Equipos' }}</code>.
-                Extensiones permitidas: {{ 'pdf, jpg, jpeg, png, xlsx, xls' }}.
-              </div>
+        <div class="card shadow-sm mt-4">
+          <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <strong>Archivo principal</strong>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-outline-secondary btn-sm" id="btnAutofill">
+                <i class="bi bi-magic"></i> Leer datos del acta
+              </button>
             </div>
-
-            {% if enable_upload %}
-            <div class="col-lg-4">
-              <label class="form-label small text-muted">o sube el archivo (máx. 5MB)</label>
-              <input type="file" name="archivo" class="form-control">
+          </div>
+          <div class="card-body">
+            <label class="form-label">Pega la ruta UNC de un archivo dentro de la carpeta de red</label>
+            <input name="ruta_principal" id="ruta_principal" class="form-control"
+              placeholder="\\itzamna\DATAUSERS\ADM Y SISTEMAS\Entrega Equipos\mi_acta.xlsx">
+            <div class="form-text">
+              Debe estar dentro de <code>\\itzamna\DATAUSERS\ADM Y SISTEMAS\Entrega Equipos</code>.
+              Extensiones permitidas: .xlsx, .xls
             </div>
-            {% endif %}
           </div>
         </div>
-        <!-- ================================ -->
-        <div class="mt-4 d-flex justify-content-between">
-          <button type="submit" class="btn btn-success">
-            <i class="bi bi-check-circle"></i> Guardar
-          </button>
-          <a href="{{ url_for('index') }}" class="btn btn-secondary">
-            ← Volver
-          </a>
-        </div>
 
+        {% if enable_upload %}
+        <div class="col-lg-4">
+          <label class="form-label small text-muted">o sube el archivo (máx. 5MB)</label>
+          <input type="file" name="archivo" class="form-control">
+        </div>
+        {% endif %}
       </div>
-    </form>
   </div>
+
+  <div class="mt-4 d-flex justify-content-between">
+    <button type="submit" class="btn btn-success">
+      <i class="bi bi-check-circle"></i> Guardar
+    </button>
+    <a href="{{ url_for('index') }}" class="btn btn-secondary">
+      ← Volver
+    </a>
+  </div>
+
 </div>
+</form>
+</div>
+</div>
+
+<!-- === SCRIPT PARA AUTO-LLENADO DESDE EXCEL === -->
+<script>
+(() => {
+  const $ = (s) => document.querySelector(s);
+
+  const btn = $('#btnAutofill');
+  const rutaInput = $('#ruta_principal');
+
+  const fields = {
+    tipo_equipo:      'input[name="tipo_equipo"]',
+    tag:              'input[name="tag"]',
+    marca:            'input[name="marca"]',
+    modelo:           'input[name="modelo"]',
+    serial:           'input[name="serial"]',
+    ubicacion:        'input[name="ubicacion"]',
+    persona_asignada: 'input[name="persona_asignada"]',
+    observaciones:    'textarea[name="observaciones"]',
+    cargador:         'input[name="cargador"]',
+    maletin:          'input[name="maletin"]',
+    mouse:            'input[name="mouse"]',
+    teclado:          'input[name="teclado"]',
+  };
+
+  async function autofillFromPath() {
+    const ruta = (rutaInput.value || '').trim();
+    if (!ruta) { alert('Pega primero la ruta UNC del acta.'); return; }
+
+    btn.disabled = true; btn.textContent = 'Leyendo...';
+    try {
+      const res = await fetch('{{ url_for("new_autofill_from_path") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ ruta })
+      });
+      const js = await res.json();
+      if (!js.ok) { alert(js.error || 'No se pudo leer el acta.'); return; }
+
+      const d = js.data || {};
+      // Campos de texto
+      ['tipo_equipo','tag','marca','modelo','serial','ubicacion','persona_asignada','observaciones']
+      .forEach(k => {
+        const el = $(fields[k]);
+        if (el && d[k]) el.value = d[k];
+      });
+
+      // Checks de accesorios
+      ['cargador','maletin','mouse','teclado'].forEach(k => {
+        const el = $(fields[k]);
+        if (el) el.checked = !!d[k];
+      });
+    } catch (e) {
+      console.error(e);
+      alert('Error de red o del servidor.');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Leer datos del acta';
+    }
+  }
+
+  if (btn) btn.addEventListener('click', autofillFromPath);
+})();
+</script>
 
 {% endblock %}

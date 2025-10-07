@@ -229,6 +229,8 @@ def obtener_equipo_por_tag(tag):
             e.Maletin AS maletin,
             e.Mouse AS mouse,
             e.Teclado AS teclado,
+            e.Impresora  AS impresora,   
+            e.Lector   AS lector, 
             e.Observaciones AS observaciones
         FROM ti.Equipo e
         WHERE LTRIM(RTRIM(e.Tag)) = ?
@@ -238,36 +240,13 @@ def obtener_equipo_por_tag(tag):
     cur.close(); conn.close()
     return equipo
 
-def obtener_equipo_por_tag(tag):
-    conn = get_connection()
-    cur = conn.cursor()
-    cur.execute("""
-        SELECT
-            e.EquipoId,
-            LTRIM(RTRIM(e.Tag)) AS tag,
-            e.Modelo AS modelo,
-            e.Marca AS marca,
-            e.Serial AS serial,
-            e.Ubicacion AS ubicacion,
-            e.Cargador AS cargador,
-            e.Maletin AS maletin,
-            e.Mouse AS mouse,
-            e.Teclado AS teclado,
-            e.Observaciones AS observaciones
-        FROM ti.Equipo e
-        WHERE LTRIM(RTRIM(e.Tag)) = ?
-    """, (tag,))
-    row = cur.fetchone()
-    equipo = dict(zip([c[0] for c in cur.description], row)) if row else {}
-    cur.close(); conn.close()
-    return equipo
 
 def equipo_upsert_completo(tag, marca, modelo, serial, ubicacion, persona_asignada,
-                           cargador, maletin, mouse, teclado, observaciones):
+                           cargador, maletin, mouse, teclado, observaciones,
+                           impresora=0, lector=0):
     """
     Upsert del equipo SIN perder la persona asignada.
-    - Si viene 'persona_asignada' la crea/actualiza y la deja en el equipo.
-    - Si viene vacía/None, conserva la PersonaAsignadaId actual.
+    Guarda además impresora y lector (bit).
     """
     conn = get_connection()
     cur = conn.cursor()
@@ -283,10 +262,11 @@ def equipo_upsert_completo(tag, marca, modelo, serial, ubicacion, persona_asigna
         row = cur.fetchone()
         persona_id = row[0] if row else None
 
-    # 2) MERGE conservando la persona si no se envía nombre
-    cur.execute("""
+    # 2) MERGE con 26 placeholders:
+    #    1 (USING) + 12 (UPDATE) + 13 (INSERT) = 26
+    sql = """
         MERGE ti.Equipo AS target
-        USING (SELECT ? AS Tag) AS src
+        USING (SELECT CAST(? AS NVARCHAR(50)) AS Tag) AS src
         ON (target.Tag = src.Tag)
         WHEN MATCHED THEN
             UPDATE SET
@@ -294,27 +274,35 @@ def equipo_upsert_completo(tag, marca, modelo, serial, ubicacion, persona_asigna
                 Modelo      = ?,
                 Serial      = ?,
                 Ubicacion   = ?,
-                -- si persona_id es NULL, conserva la que ya está
                 PersonaAsignadaId = COALESCE(?, target.PersonaAsignadaId),
                 Cargador    = ?,
                 Maletin     = ?,
                 Mouse       = ?,
                 Teclado     = ?,
+                Impresora   = ?,      -- NUEVO
+                Lector      = ?,      -- NUEVO
                 Observaciones = ?
         WHEN NOT MATCHED THEN
-            INSERT (Tag, Marca, Modelo, Serial, Ubicacion, PersonaAsignadaId, Cargador, Maletin, Mouse, Teclado, Observaciones)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-    """, (
-        # WHEN MATCHED
-        tag, marca, modelo, serial, ubicacion, persona_id,
-        cargador, maletin, mouse, teclado, observaciones,
-        # WHEN NOT MATCHED (insert)
-        tag, marca, modelo, serial, ubicacion, persona_id,
-        cargador, maletin, mouse, teclado, observaciones
-    ))
+            INSERT (Tag, Marca, Modelo, Serial, Ubicacion, PersonaAsignadaId,
+                    Cargador, Maletin, Mouse, Teclado, Impresora, Lector, Observaciones)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    """
 
+    params = (
+        # USING (1)
+        tag,
+        # UPDATE (12)
+        marca, modelo, serial, ubicacion, persona_id,
+        cargador, maletin, mouse, teclado, impresora, lector, observaciones,
+        # INSERT (13)
+        tag, marca, modelo, serial, ubicacion, persona_id,
+        cargador, maletin, mouse, teclado, impresora, lector, observaciones
+    )
+
+    cur.execute(sql, params)
     conn.commit()
     cur.close(); conn.close()
+
 
 def archivo_principal_get(tag: str):
     conn = get_connection(); cur = conn.cursor()

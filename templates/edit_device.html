@@ -27,25 +27,36 @@
         <div class="col-md-12">
           <label class="form-label">Accesorios</label><br>
           <div class="form-check form-check-inline">
-            <input class="form-check-input" type="checkbox" name="cargador" value="1" id="cargador"
-                   {% if equipo.cargador %}checked{% endif %}>
+            <input class="form-check-input" type="checkbox" name="cargador" value="1" id="cargador" {% if
+              equipo.cargador %}checked{% endif %}>
             <label class="form-check-label" for="cargador">Cargador</label>
           </div>
           <div class="form-check form-check-inline">
-            <input class="form-check-input" type="checkbox" name="maletin" value="1" id="maletin"
-                   {% if equipo.maletin %}checked{% endif %}>
+            <input class="form-check-input" type="checkbox" name="maletin" value="1" id="maletin" {% if equipo.maletin
+              %}checked{% endif %}>
             <label class="form-check-label" for="maletin">Maletín</label>
           </div>
           <div class="form-check form-check-inline">
-            <input class="form-check-input" type="checkbox" name="mouse" value="1" id="mouse"
-                   {% if equipo.mouse %}checked{% endif %}>
+            <input class="form-check-input" type="checkbox" name="mouse" value="1" id="mouse" {% if equipo.mouse
+              %}checked{% endif %}>
             <label class="form-check-label" for="mouse">Mouse</label>
           </div>
           <div class="form-check form-check-inline">
-            <input class="form-check-input" type="checkbox" name="teclado" value="1" id="teclado"
-                   {% if equipo.teclado %}checked{% endif %}>
+            <input class="form-check-input" type="checkbox" name="teclado" value="1" id="teclado" {% if equipo.teclado
+              %}checked{% endif %}>
             <label class="form-check-label" for="teclado">Teclado</label>
           </div>
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" name="lector" value="1" id="lector" {% if equipo.lector
+              %}checked{% endif %}>
+            <label class="form-check-label" for="lector">Lector</label>
+          </div>
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" name="impresora" value="1" id="impresora" {% if
+              equipo.impresora %}checked{% endif %}>
+            <label class="form-check-label" for="impresora">Impresora</label>
+          </div>
+
         </div>
         <div class="col-md-12">
           <label class="form-label">Observaciones</label>

@@ -1,6 +1,7 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, send_file, abort
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file, abort, jsonify
 from werkzeug.utils import secure_filename
-import os, time, base64
+from openpyxl import load_workbook
+import os, time, base64, re
 
 from db import (
     sp_equipo_upsert,
@@ -25,10 +26,7 @@ app.config['ENABLE_UPLOAD'] = False  # <<— si quieres habilitar subida directa
 # =========================
 #  Carpetas de red
 # =========================
-# Donde escaneamos/buscamos archivos ya existentes para VINCULARLOS (no subirlos).
 SHARE_ROOT = r'\\itzamna\DATAUSERS\ADM Y SISTEMAS\Entrega Equipos'
-
-# Donde (si quisieras) se pueden SUBIR/Reemplazar archivos principales manualmente.
 UPLOAD_ROOT = r'\\itzamna\DATAUSERS\ADM Y SISTEMAS\Entrega Equipos'
 
 ALLOWED_EXTS = {'pdf', 'jpg', 'jpeg', 'png', 'xlsx', 'xls'}
@@ -71,7 +69,6 @@ def _scan_files_for_tag(tag: str):
                 except OSError:
                     continue
                 out.append({"name": nm, "path": full, "size": size, "mtime": mtime, "token": _encode_path(full)})
-    # ordena recientes primero
     out.sort(key=lambda x: (x["mtime"], x["name"]), reverse=True)
     return out
 
@@ -81,8 +78,7 @@ def _scan_files_for_tag(tag: str):
 def save_equipo_file_principal(tag: str, file_storage):
     """
     Guarda un ÚNICO archivo principal por equipo en la carpeta raíz de UPLOAD_ROOT.
-    Nombre final: <tag>.<ext>  (reemplaza si ya existe).
-    También lo deja marcado como principal en BD.
+    Nombre final: <tag>.<ext>; marca como principal en BD.
     """
     if not file_storage or not file_storage.filename:
         return None, "Archivo vacío."
@@ -95,7 +91,6 @@ def save_equipo_file_principal(tag: str, file_storage):
     stored = f"{tag}{ext}"
     path = os.path.join(UPLOAD_ROOT, stored)
 
-    # tamaño (suave)
     try:
         file_storage.stream.seek(0, os.SEEK_END)
         size = file_storage.stream.tell()
@@ -106,14 +101,53 @@ def save_equipo_file_principal(tag: str, file_storage):
         return None, "Máximo 5MB por archivo."
 
     file_storage.save(path)
-    # Al subir, también marcamos ese archivo como principal por conveniencia
     archivo_principal_set(tag, path, stored)
     return stored, None
 
 # =========================
+#  Helpers AUTOFILL desde Excel
+# =========================
+def _xlsx_to_grid(path):
+    """Devuelve la hoja activa como matriz de strings (fila/col)."""
+    wb = load_workbook(path, data_only=True)
+    ws = wb.active
+    grid = []
+    for r in ws.iter_rows(values_only=True):
+        row = []
+        for v in r:
+            s = '' if v is None else str(v).strip()
+            row.append(s)
+        grid.append(row)
+    return grid
+
+def _find_cell(grid, needle):
+    """Busca la 1ª celda que contenga 'needle' (case-insensitive). Devuelve (r,c) 0-based o None."""
+    n = (needle or '').lower()
+    for r, row in enumerate(grid):
+        for c, val in enumerate(row):
+            if n in (val or '').lower():
+                return (r, c)
+    return None
+
+def _safe_get(grid, r, c):
+    try:
+        return grid[r][c]
+    except Exception:
+        return ''
+
+def _truthy(s):
+    """Interpreta '✔', 'x', 'si', 'sí', 'true', '1' como True."""
+    s = (s or '').strip().lower()
+    return s in {'✔', 'si', 'sí', 'true', '1', 'x'}
+
+def _extract_tag_from_text(text):
+    """Intenta sacar el Activo de un texto tipo '... activo: 0580'."""
+    m = re.search(r'(?i)\bactivo\b\s*[:#-]?\s*([A-Za-z0-9\-]+)', text or '')
+    return m.group(1).strip() if m else ''
+
+# =========================
 #        Rutas
 # =========================
-
 @app.route('/')
 def index():
     q = request.args.get('q', '').strip()
@@ -141,12 +175,14 @@ def new_device():
         maletin = 1 if request.form.get('maletin') else 0
         mouse = 1 if request.form.get('mouse') else 0
         teclado = 1 if request.form.get('teclado') else 0
+        impresora = 1 if request.form.get('impresora') else 0   # <— NUEVO
+        lector    = 1 if request.form.get('lector')    else 0   # <— NUEVO
         observaciones = request.form.get('observaciones')
 
         # 1) Guardamos/actualizamos equipo
         equipo_upsert_completo(
             tag, marca, modelo, serial, ubicacion, persona_asignada,
-            cargador, maletin, mouse, teclado, observaciones
+            cargador, maletin, mouse, teclado, observaciones, impresora, lector   
         )
 
         # 2) Procesamos archivo principal OPCIONAL
@@ -154,7 +190,6 @@ def new_device():
         archivo_subido = request.files.get('archivo') if app.config.get('ENABLE_UPLOAD') else None
 
         if ruta_manual:
-            # Validar que exista, que esté dentro del SHARE_ROOT y que su extensión sea permitida
             if not _is_inside(ruta_manual, SHARE_ROOT):
                 flash('La ruta pegada no pertenece a la carpeta de red configurada.', 'danger')
             elif not os.path.isfile(ruta_manual):
@@ -176,6 +211,146 @@ def new_device():
 
     return render_template('new_device.html', enable_upload=app.config['ENABLE_UPLOAD'])
 
+# === NUEVO: autollenado desde la ruta de Excel ===
+@app.post('/new/autofill_from_path')
+def new_autofill_from_path():
+    ruta = (request.json or {}).get('ruta', '').strip()
+    if not ruta:
+        return {"ok": False, "error": "No enviaste la ruta."}, 400
+    if not _is_inside(ruta, SHARE_ROOT):
+        return {"ok": False, "error": "La ruta no pertenece a la carpeta de red configurada."}, 400
+    if not os.path.isfile(ruta):
+        return {"ok": False, "error": "La ruta no existe como archivo."}, 404
+    if not ruta.lower().endswith(('.xlsx', '.xls')):
+        return {"ok": False, "error": "Solo se admite Excel (.xlsx/.xls) para autollenar."}, 400
+
+    try:
+        grid = _xlsx_to_grid(ruta)
+    except Exception as e:
+        return {"ok": False, "error": f"No pude leer el Excel: {e}"}, 400
+
+    # Helpers
+    def find_cell(needle):
+        return _find_cell(grid, needle)
+
+    def get(r, c):
+        return _safe_get(grid, r, c)
+
+    def col_of(header, header_row):
+        """Busca 'header' en la fila de encabezados y devuelve su columna."""
+        h = header.lower()
+        for c, val in enumerate(grid[header_row]):
+            if h in (val or '').lower():
+                return c
+        return None
+
+    def first_below(col, header_row, max_down=6):
+        """Devuelve el primer valor NO vacío debajo del encabezado."""
+        for r in range(header_row + 1, min(header_row + 1 + max_down, len(grid))):
+            txt = get(r, col)
+            if txt:
+                return txt
+        return ''
+
+    data = {
+        "tipo_equipo": "",
+        "marca": "",
+        "modelo": "",
+        "serial": "",
+        "ubicacion": "",
+        "persona_asignada": "",
+        "observaciones": "",
+        "cargador": 0,
+        "maletin": 0,
+        "mouse": 0,
+        "teclado": 0,
+        "tag": ""
+    }
+
+    # 1) Encontrar la fila de encabezados (donde esté "Equipo Entregado")
+    pos_eq = find_cell('Equipo Entregado')
+    if pos_eq:
+        r_head, _ = pos_eq
+
+        # Columnas según el texto en esa MISMA fila
+        c_tipo   = col_of('Equipo Entregado', r_head)
+        c_marca  = col_of('Marca', r_head)
+        c_modelo = col_of('Modelo', r_head)
+        c_serial = col_of('Serial', r_head)
+
+        if c_tipo   is not None: data["tipo_equipo"] = first_below(c_tipo,   r_head)
+        if c_marca  is not None: data["marca"]       = first_below(c_marca,  r_head)
+        if c_modelo is not None: data["modelo"]      = first_below(c_modelo, r_head)
+        if c_serial is not None: data["serial"]      = first_below(c_serial, r_head)
+
+    # 2) Ubicación: celda a la derecha de "Lugar"
+    pos_lugar = find_cell('Lugar')
+    if pos_lugar:
+        r, c = pos_lugar
+        data["ubicacion"] = get(r, c + 1)
+
+    # 3) Persona asignada: buscar "Entregado a", luego "Nombre:" cerca
+    pos_entregado_a = find_cell('Entregado a')
+    if pos_entregado_a:
+        rA, cA = pos_entregado_a
+        nombre_rc = None
+        for rr in range(rA + 1, min(rA + 12, len(grid))):  # un poco más laxo
+            for cc, val in enumerate(grid[rr]):
+                if 'nombre' in (val or '').lower():
+                    nombre_rc = (rr, cc)
+                    break
+            if nombre_rc:
+                break
+        if nombre_rc:
+            rn, cn = nombre_rc
+            data["persona_asignada"] = get(rn, cn + 1)
+
+  
+    # 4) Observaciones + extraer "activo: XXXX"
+    def first_right(row, start_c, max_right=10):
+        """Primer valor no vacío a la derecha, en la misma fila."""
+        if row < 0 or row >= len(grid): 
+            return ''
+        for cc in range(start_c + 1, min(start_c + 1 + max_right, len(grid[row]))):
+            txt = get(row, cc)
+            if txt:
+                return txt
+        return ''
+
+    pos_obs = find_cell('Observaciones')
+    if pos_obs:
+        r, c = pos_obs
+        # 1) intenta en la misma fila, a la derecha
+        obs = first_right(r, c, max_right=12)
+        # 2) si no hay, intenta debajo de la misma columna
+        if not obs:
+            obs = first_below(c, r, max_down=6)
+        data["observaciones"] = obs
+        # si encontramos "activo: XXXX" dentro del texto, úsalo para el tag si aún no lo tenemos
+        tag_from_obs = _extract_tag_from_text(obs)
+        if tag_from_obs and not data.get("tag"):
+            data["tag"] = tag_from_obs
+
+    # 5) Accesorios
+    pos_cargador = find_cell('Cargador')
+    pos_maletin  = find_cell('Maletín') or find_cell('Maletin')
+    pos_mouse    = find_cell('Mouse')
+    pos_teclado  = find_cell('Teclado')
+
+    if pos_cargador:
+        r, c = pos_cargador
+        data["cargador"] = 1 if _truthy(get(r + 1, c)) else 0
+    if pos_maletin:
+        r, c = pos_maletin
+        data["maletin"] = 1 if _truthy(get(r + 1, c)) else 0
+    if pos_mouse:
+        data["mouse"] = 1
+    if pos_teclado:
+        data["teclado"] = 1
+
+    return {"ok": True, "data": data}
+
+
 # --- Vista dispositivo ---
 @app.route('/device/<tag>', methods=['GET', 'POST'])
 def device_view(tag):
@@ -192,10 +367,8 @@ def device_view(tag):
     historial = historial_por_equipo(tag)
     equipo = obtener_equipo_por_tag(tag)
 
-    # Archivo principal actual
-    principal = archivo_principal_get(tag)  # {'ruta':..., 'nombre':...} o None
+    principal = archivo_principal_get(tag)
 
-    # Si ya hay principal, ocultamos coincidencias
     if principal:
         files_preview = []
     else:
@@ -245,7 +418,6 @@ def device_link_save(tag):
         flash('Extensión de archivo no permitida.', 'danger')
         return redirect(url_for('device_link', tag=tag))
 
-    # Persistimos en BD solo la ruta del archivo principal (sin copiar el archivo)
     archivo_principal_set(tag, full, nombre)
     flash('Archivo principal vinculado correctamente.', 'success')
     return redirect(url_for('device_view', tag=tag))
@@ -301,7 +473,7 @@ def device_baja(tag):
     flash(f'Equipo {tag} marcado en BAJA.', 'success')
     return redirect(url_for('device_view', tag=tag))
 
-# --- Archivos listados (pantalla general de archivos) ---
+# --- Archivos listados ---
 @app.get('/device/<tag>/files')
 def device_files(tag):
     principal = archivo_principal_get(tag)
@@ -345,18 +517,20 @@ def edit_device(tag):
         maletin = 1 if request.form.get('maletin') else 0
         mouse = 1 if request.form.get('mouse') else 0
         teclado = 1 if request.form.get('teclado') else 0
+        impresora = 1 if request.form.get('impresora') else 0   
+        lector    = 1 if request.form.get('lector')    else 0 
         observaciones = request.form.get('observaciones')
 
         equipo_upsert_completo(
             tag, marca, modelo, serial, ubicacion, persona_asignada,
-            cargador, maletin, mouse, teclado, observaciones
+            cargador, maletin, mouse, teclado, observaciones, impresora, lector
         )
         flash('Equipo actualizado correctamente.', 'success')
         return redirect(url_for('device_view', tag=tag))
 
     return render_template('edit_device.html', equipo=equipo, tag=tag)
 
-# --- Búsqueda por persona / listas auxiliares ---
+# --- Búsqueda por persona ---
 @app.route('/search/person', methods=['GET'])
 def search_person():
     nombre = request.args.get('nombre', '').strip()
