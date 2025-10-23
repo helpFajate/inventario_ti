@@ -110,7 +110,19 @@
             <label class="form-label mb-0"><strong>Modelo:</strong></label>
             <div>{{ equipo.modelo or '—' }}</div>
           </div>
-          <p><strong>Equipo entregado:</strong> {{ equipo.tipoequipo or '—' }}</p>
+          <div class="row g-3">
+            <div class="col-md-6">
+              {% if equipo.tipoequipo %}
+              <p><strong>Equipo entregado:</strong> {{ equipo.tipoequipo }}</p>
+              {% endif %}
+
+            </div>
+            <div class="row g-3"></div>
+            <div class="col-md-6">
+              <p><strong>Persona asignada:</strong> {{ equipo.personaasignada or '—' }}</p>
+            </div>
+          </div>
+
 
           <div class="col-md-4">
             <label class="form-label mb-0"><strong>Serial:</strong></label>

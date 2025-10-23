@@ -221,24 +221,28 @@ def obtener_equipo_por_tag(tag):
         SELECT
             e.EquipoId,
             LTRIM(RTRIM(e.Tag)) AS tag,
-            e.Modelo AS modelo,
-            e.Marca AS marca,
-            e.Serial AS serial,
-            e.Ubicacion AS ubicacion,
-            e.Cargador AS cargador,
-            e.Maletin AS maletin,
-            e.Mouse AS mouse,
-            e.Teclado AS teclado,
-            e.Impresora  AS impresora,   
-            e.Lector   AS lector, 
-            e.Observaciones AS observaciones
+            e.Modelo           AS modelo,
+            e.Marca            AS marca,
+            e.Serial           AS serial,
+            e.Ubicacion        AS ubicacion,
+            e.TipoEquipo       AS tipoequipo,        -- <-- tipo de equipo (Todo en uno, PC...)
+            pa.Nombre          AS personaasignada,   -- <-- nombre de la persona asignada
+            e.Cargador         AS cargador,
+            e.Maletin          AS maletin,
+            e.Mouse            AS mouse,
+            e.Teclado          AS teclado,
+            ISNULL(e.Impresora, 0) AS impresora,     -- opcional: checkbox impresora
+            ISNULL(e.Lector, 0)   AS lector,         -- opcional: checkbox lector
+            e.Observaciones    AS observaciones
         FROM ti.Equipo e
+        LEFT JOIN ti.Persona pa ON pa.PersonaId = e.PersonaAsignadaId
         WHERE LTRIM(RTRIM(e.Tag)) = ?
     """, (tag,))
     row = cur.fetchone()
     equipo = dict(zip([c[0] for c in cur.description], row)) if row else {}
     cur.close(); conn.close()
     return equipo
+
 
 
 def equipo_upsert_completo(tag, marca, modelo, serial, ubicacion, persona_asignada,
