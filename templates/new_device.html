@@ -7,17 +7,27 @@
     <h3 class="mb-4" style="color:var(--vivel-primary)">Registrar equipo</h3>
 
     <form method="post" action="{{ url_for('new_device') }}" enctype="multipart/form-data">
+      <!-- Tipo de asignación -->
       <div class="row mb-3">
-        <div class="col-md-4">
-          <label for="tipo_equipo" class="form-label">Equipo entregado</label>
-          <input type="text" id="tipo_equipo" name="tipo_equipo" class="form-control"
-            placeholder="Ej: CPU + Pantalla, Portátil, Impresora..." />
+        <div class="col-md-6">
+          <label for="tipo_ubicacion" class="form-label fw-bold">Tipo de asignación *</label>
+          <select id="tipo_ubicacion" name="tipo_ubicacion" class="form-select" required>
+            <option value="ALMACEN" selected>Almacén</option>
+            <option value="ADMINISTRATIVO">Administrativo</option>
+          </select>
+          <div class="form-text">Selecciona si el equipo está en almacén o asignado a un administrativo</div>
         </div>
       </div>
 
+      <!-- Equipo / básico -->
       <div class="row g-3">
         <div class="col-md-4">
-          <label class="form-label">Activo</label>
+          <label class="form-label">Equipo entregado</label>
+          <input id="tipo_equipo" name="tipo_equipo" class="form-control" placeholder="Ej: CPU + Pantalla, Portátil, Impresora...">
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">Activo *</label>
           <input name="tag" class="form-control" required>
         </div>
 
@@ -37,83 +47,141 @@
         </div>
 
         <div class="col-md-4">
-          <label class="form-label">Ubicación</label>
-          <input name="ubicacion" class="form-control">
+          <label class="form-label">Ubicación física</label>
+          <input name="ubicacion" class="form-control" placeholder="Ej: Oficina 201, Bodega A">
         </div>
 
         <div class="col-md-4">
-          <label class="form-label">Persona asignada (nombre)</label>
-          <input name="persona_asignada" class="form-control">
+          <label class="form-label">Persona asignada</label>
+          <input name="persona_asignada" class="form-control" placeholder="Nombre completo">
         </div>
 
-        <div class="col-12">
-          <label class="form-label">Accesorios</label>
-          <div>
-            <label class="me-3"><input type="checkbox" name="cargador"> Cargador</label>
-            <label class="me-3"><input type="checkbox" name="maletin"> Maletín</label>
-            <label class="me-3"><input type="checkbox" name="mouse"> Mouse</label>
-            <label class="me-3"><input type="checkbox" name="teclado"> Teclado</label>
-            <label class="me-3"><input type="checkbox" name="impresora"> Impresora</label>
-            <label class="me-3"><input type="checkbox" name="lector"> Lector</label>
+        <!-- CAMPOS CONDICIONALES PARA ADMINISTRATIVOS (oculto por defecto) -->
+        <div id="campos_administrativo" class="col-12" style="display:none">
+          <div class="card border-0 shadow-sm mt-2">
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label for="area" class="form-label">Área / Departamento</label>
+                  <input id="area" name="area" class="form-control" placeholder="Ej: Contabilidad, RRHH, Ventas">
+                </div>
+                <div class="col-md-6">
+                  <label for="cargo" class="form-label">Cargo</label>
+                  <input id="cargo" name="cargo" class="form-control" placeholder="Ej: Analista, Gerente, Asistente">
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
+        <!-- Accesorios -->
+        <div class="col-12">
+          <label class="form-label">Accesorios</label>
+          <div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" id="cargador" name="cargador">
+              <label class="form-check-label" for="cargador">Cargador</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" id="maletin" name="maletin">
+              <label class="form-check-label" for="maletin">Maletín</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" id="mouse" name="mouse">
+              <label class="form-check-label" for="mouse">Mouse</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" id="teclado" name="teclado">
+              <label class="form-check-label" for="teclado">Teclado</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" id="impresora" name="impresora">
+              <label class="form-check-label" for="impresora">Impresora</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" id="lector" name="lector">
+              <label class="form-check-label" for="lector">Lector</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Observaciones -->
         <div class="col-12">
           <label class="form-label">Observaciones</label>
           <textarea name="observaciones" class="form-control" rows="3"></textarea>
         </div>
 
-        <!-- === Archivo principal  === -->
-        <div class="card shadow-sm mt-4">
-          <div class="card-header bg-white d-flex justify-content-between align-items-center">
-            <strong>Archivo principal</strong>
-            <div class="d-flex gap-2">
-              <button type="button" class="btn btn-outline-secondary btn-sm" id="btnAutofill">
-                <i class="bi bi-magic"></i> Leer datos del acta
-              </button>
+        <!-- Archivo principal -->
+        <div class="col-12">
+          <div class="card shadow-sm mt-3">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+              <strong>Archivo principal</strong>
+              <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="btnAutofill">
+                  <i class="bi bi-magic"></i> Leer datos del acta
+                </button>
+              </div>
             </div>
-          </div>
-          <div class="card-body">
-            <label class="form-label">Pega la ruta UNC de un archivo dentro de la carpeta de red</label>
-            <input name="ruta_principal" id="ruta_principal" class="form-control"
-              placeholder="\\itzamna\DATAUSERS\ADM Y SISTEMAS\Entrega Equipos\mi_acta.xlsx">
-            <div class="form-text">
-              Debe estar dentro de <code>\\itzamna\DATAUSERS\ADM Y SISTEMAS\Entrega Equipos</code>.
-              Extensiones permitidas: .xlsx, .xls
+            <div class="card-body">
+              <label class="form-label">Pega la ruta UNC de un archivo dentro de la carpeta de red</label>
+              <input name="ruta_principal" id="ruta_principal" class="form-control"
+                placeholder="\\itzamna\DATAUSERS\ADM Y SISTEMAS\Entrega Equipos\mi_acta.xlsx">
+              <div class="form-text">
+                Debe estar dentro de <code>\\itzamna\DATAUSERS\ADM Y SISTEMAS\Entrega Equipos</code>.
+                Extensiones permitidas: .xlsx, .xls
+              </div>
             </div>
           </div>
         </div>
-
-        {% if enable_upload %}
-        <div class="col-lg-4">
-          <label class="form-label small text-muted">o sube el archivo (máx. 5MB)</label>
-          <input type="file" name="archivo" class="form-control">
-        </div>
-        {% endif %}
       </div>
+
+      <!-- Botones -->
+      <div class="mt-4 d-flex justify-content-between">
+        <button type="submit" class="btn btn-success">
+          <i class="bi bi-check-circle"></i> Guardar
+        </button>
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">
+          ← Volver
+        </a>
+      </div>
+    </form>
   </div>
-
-  <div class="mt-4 d-flex justify-content-between">
-    <button type="submit" class="btn btn-success">
-      <i class="bi bi-check-circle"></i> Guardar
-    </button>
-    <a href="{{ url_for('index') }}" class="btn btn-secondary">
-      ← Volver
-    </a>
-  </div>
-
-</div>
-</form>
-</div>
 </div>
 
-<!-- === SCRIPT PARA AUTO-LLENADO DESDE EXCEL === -->
+<!-- JS: toggle administrativo + autofill -->
 <script>
 (() => {
-  const $ = (s) => document.querySelector(s);
+  // Toggle campos administrativos
+  const tipoSelect = document.getElementById('tipo_ubicacion');
+  const camposAdmin = document.getElementById('campos_administrativo');
+  const areaInput = document.getElementById('area');
+  const cargoInput = document.getElementById('cargo');
 
-  const btn = $('#btnAutofill');
-  const rutaInput = $('#ruta_principal');
+  function toggleAdminFields() {
+    if (!tipoSelect) return;
+    const esAdmin = tipoSelect.value === 'ADMINISTRATIVO';
+    if (camposAdmin) camposAdmin.style.display = esAdmin ? 'block' : 'none';
+    if (areaInput && cargoInput) {
+      if (esAdmin) {
+        areaInput.setAttribute('required','required');
+        cargoInput.setAttribute('required','required');
+      } else {
+        areaInput.removeAttribute('required');
+        cargoInput.removeAttribute('required');
+        areaInput.value = '';
+        cargoInput.value = '';
+      }
+    }
+  }
+  if (tipoSelect) {
+    tipoSelect.addEventListener('change', toggleAdminFields);
+    toggleAdminFields();
+  }
+
+  // Autofill desde servidor
+  const $ = s => document.querySelector(s);
+  const btn = document.getElementById('btnAutofill');
+  const rutaInput = document.getElementById('ruta_principal');
 
   const fields = {
     tipo_equipo:      'input[name="tipo_equipo"]',
@@ -124,10 +192,14 @@
     ubicacion:        'input[name="ubicacion"]',
     persona_asignada: 'input[name="persona_asignada"]',
     observaciones:    'textarea[name="observaciones"]',
+    area:             'input[name="area"]',
+    cargo:            'input[name="cargo"]',
     cargador:         'input[name="cargador"]',
     maletin:          'input[name="maletin"]',
     mouse:            'input[name="mouse"]',
     teclado:          'input[name="teclado"]',
+    impresora:        'input[name="impresora"]',
+    lector:           'input[name="lector"]'
   };
 
   async function autofillFromPath() {
@@ -145,18 +217,32 @@
       if (!js.ok) { alert(js.error || 'No se pudo leer el acta.'); return; }
 
       const d = js.data || {};
-      // Campos de texto
+
+      // Rellenar inputs de texto
       ['tipo_equipo','tag','marca','modelo','serial','ubicacion','persona_asignada','observaciones']
       .forEach(k => {
-        const el = $(fields[k]);
+        const sel = fields[k];
+        const el = sel ? document.querySelector(sel) : null;
         if (el && d[k]) el.value = d[k];
       });
 
-      // Checks de accesorios
-      ['cargador','maletin','mouse','teclado'].forEach(k => {
-        const el = $(fields[k]);
+      // Checks accesorios (incluye impresora/lector aunque Excel no las llene)
+      ['cargador','maletin','mouse','teclado','impresora','lector'].forEach(k => {
+        const sel = fields[k];
+        const el = sel ? document.querySelector(sel) : null;
         if (el) el.checked = !!d[k];
       });
+
+      // Si la acta trae "persona asignada" y es administrativo, selecciona el tipo
+      if (d.persona_asignada && d.area) {
+        const tipo = document.getElementById('tipo_ubicacion');
+        tipo.value = 'ADMINISTRATIVO';
+        toggleAdminFields();
+        if (areaInput) areaInput.value = d.area || '';
+        if (cargoInput) cargoInput.value = d.cargo || '';
+      }
+
+      alert('✅ Datos cargados desde el acta');
     } catch (e) {
       console.error(e);
       alert('Error de red o del servidor.');

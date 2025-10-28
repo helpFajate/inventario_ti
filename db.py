@@ -1,4 +1,5 @@
 import os
+import base64
 from dotenv import load_dotenv
 import datetime as _dt
 
@@ -27,7 +28,7 @@ def sp_equipo_upsert(tag, modelo=None, serial=None, ubicacion=None, persona_asig
         DECLARE @EquipoId INT;
         EXEC ti.sp_Equipo_Upsert
             @Tag=?, @Modelo=?, @Serial=?, @Ubicacion=?,
-            @PersonaAsignadaNombre=?, @Cargo=?,           -- << nuevo parámetro
+            @PersonaAsignadaNombre=?, @Cargo=?,
             @EquipoId=@EquipoId OUTPUT;
         SELECT @EquipoId AS EquipoId;
     """, (tag, modelo, serial, ubicacion, persona_asignada, cargo))
@@ -122,8 +123,6 @@ def query_dispositivos(filtro_tag=None, filtro_persona=None, solo_activos=True):
     return rows
 
 
-
-
 def historial_por_equipo(tag):
     safe_tag = (tag or "").strip()
     conn = get_connection()
@@ -176,9 +175,9 @@ def historial_por_equipo(tag):
 
     return rows
 
+
 def sp_equipo_reasignar(tag, nueva_persona, cargo=None, fecha=None, registrado_por='TI', descripcion=None):
     # normaliza fecha
-    import datetime as _dt
     parsed = None
     if fecha:
         txt = fecha.replace('T', ' ')
@@ -197,7 +196,6 @@ def sp_equipo_reasignar(tag, nueva_persona, cargo=None, fecha=None, registrado_p
 
 
 def sp_equipo_dar_baja(tag, motivo=None, fecha_baja=None, registrado_por='TI'):
-    import datetime as _dt
     parsed = None
     if fecha_baja:
         txt = fecha_baja.replace('T', ' ')
@@ -214,7 +212,112 @@ def sp_equipo_dar_baja(tag, motivo=None, fecha_baja=None, registrado_por='TI'):
     """, (tag, motivo, parsed, registrado_por))
     conn.commit(); cur.close(); conn.close()
 
+
+def equipo_upsert_completo(tag, marca, modelo, serial, ubicacion, persona_asignada,
+                           cargador, maletin, mouse, teclado, observaciones,
+                           impresora=0, lector=0,
+                           tipo_equipo=None, tipo_ubicacion='ALMACEN', area=None, cargo=None):
+    """
+    Upsert robusto:
+      - Si viene persona_asignada -> usa sp_Persona_Upsert(@Nombre,@Area,@Cargo,@PersonaId OUTPUT)
+        para crear/obtener PersonaId (si tipo_ubicacion == 'ADMINISTRATIVO', pasamos area/cargo al SP,
+        si no, pasamos NULLs).
+      - Luego hace MERGE en ti.Equipo (inserta/actualiza). Usa COALESCE para no sobrescribir PersonaAsignadaId
+        cuando la persona no fue enviada.
+    """
+    conn = get_connection()
+    cur = conn.cursor()
+
+    # normalizar tag y nombre
+    tag = (tag or '').strip()
+    nombre = (persona_asignada or '').strip()
+
+    persona_id = None
+
+    # 1) Resolver Persona con el SP (si enviaron nombre)
+    if nombre:
+        try:
+            # Llamamos al mismo SP tanto para ADMINISTRATIVO como para ALMACEN (SP acepta Area/Cargo NULL)
+            cur.execute("""
+                DECLARE @PersonaId INT;
+                EXEC ti.sp_Persona_Upsert @Nombre=?, @Area=?, @Cargo=?, @PersonaId=@PersonaId OUTPUT;
+                SELECT @PersonaId AS PersonaId;
+            """, (nombre, area if tipo_ubicacion == 'ADMINISTRATIVO' else None, cargo if tipo_ubicacion == 'ADMINISTRATIVO' else None))
+
+            row = cur.fetchone()
+            persona_id = row[0] if row else None
+
+            # consumir posibles resultsets adicionales para evitar "Invalid cursor state"
+            while cur.nextset():
+                pass
+        except Exception:
+            # fallback: si por alguna razón el SP falla, intentar INSERT/SELECT simple
+            try:
+                cur.execute("SELECT PersonaId FROM ti.Persona WHERE Nombre = ?", (nombre,))
+                r = cur.fetchone()
+                if r:
+                    persona_id = r[0]
+                else:
+                    cur.execute("INSERT INTO ti.Persona (Nombre, Area, Cargo) VALUES (?, ?, ?)",
+                                (nombre, area if tipo_ubicacion == 'ADMINISTRATIVO' else None,
+                                 cargo if tipo_ubicacion == 'ADMINISTRATIVO' else None))
+                    cur.execute("SELECT SCOPE_IDENTITY()")
+                    r2 = cur.fetchone()
+                    persona_id = int(r2[0]) if r2 and r2[0] else None
+            except Exception:
+                persona_id = None
+
+    # 2) MERGE/UPSERT en ti.Equipo
+    #    *** ESTO AHORA ESTÁ DENTRO DE LA FUNCIÓN ***
+    sql ="""
+        MERGE ti.Equipo AS target
+        USING (SELECT CAST(? AS NVARCHAR(50)) AS Tag) AS src
+        ON (target.Tag = src.Tag)
+        WHEN MATCHED THEN
+            UPDATE SET
+                Marca           = ?,
+                Modelo          = ?,
+                Serial          = ?,
+                Ubicacion       = ?,
+                TipoEquipo      = ?,    -- equipo entregado (p.ej. Portátil)
+                TipoUbicacion   = ?,    -- ALMACEN / ADMINISTRATIVO
+                PersonaAsignadaId = COALESCE(?, target.PersonaAsignadaId),
+                Area            = ?,
+                Cargo           = ?,
+                Cargador        = ?,
+                Maletin         = ?,
+                Mouse           = ?,
+                Teclado         = ?,
+                Impresora       = ?,
+                Lector          = ?,
+                Observaciones   = ?
+        WHEN NOT MATCHED THEN
+            INSERT (Tag, Marca, Modelo, Serial, Ubicacion, TipoEquipo, TipoUbicacion, PersonaAsignadaId,
+                    Area, Cargo, Cargador, Maletin, Mouse, Teclado, Impresora, Lector, Observaciones)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    """
+
+    params = (
+            # USING (tag)
+            tag,
+            # UPDATE values (in same order as UPDATE SET above)
+            marca, modelo, serial, ubicacion, tipo_equipo, tipo_ubicacion, persona_id,
+            area, cargo,
+            cargador, maletin, mouse, teclado, impresora, lector, observaciones,
+            # INSERT values (same order as INSERT list)
+            tag, marca, modelo, serial, ubicacion, tipo_equipo, tipo_ubicacion, persona_id,
+            area, cargo,
+            cargador, maletin, mouse, teclado, impresora, lector, observaciones
+    )
+
+    cur.execute(sql, params)
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
 def obtener_equipo_por_tag(tag):
+    """Actualizado para traer área y cargo del equipo y TipoEquipo/TipoUbicacion"""
     conn = get_connection()
     cur = conn.cursor()
     cur.execute("""
@@ -225,14 +328,17 @@ def obtener_equipo_por_tag(tag):
             e.Marca            AS marca,
             e.Serial           AS serial,
             e.Ubicacion        AS ubicacion,
-            e.TipoEquipo       AS tipoequipo,        -- <-- tipo de equipo (Todo en uno, PC...)
-            pa.Nombre          AS personaasignada,   -- <-- nombre de la persona asignada
+            e.TipoEquipo       AS tipoequipo,
+            e.TipoUbicacion    AS tipoubicacion,
+            pa.Nombre          AS personaasignada,
+            e.Area             AS area,
+            e.Cargo            AS cargo,
             e.Cargador         AS cargador,
             e.Maletin          AS maletin,
             e.Mouse            AS mouse,
             e.Teclado          AS teclado,
-            ISNULL(e.Impresora, 0) AS impresora,     -- opcional: checkbox impresora
-            ISNULL(e.Lector, 0)   AS lector,         -- opcional: checkbox lector
+            ISNULL(e.Impresora, 0) AS impresora,
+            ISNULL(e.Lector, 0)   AS lector,
             e.Observaciones    AS observaciones
         FROM ti.Equipo e
         LEFT JOIN ti.Persona pa ON pa.PersonaId = e.PersonaAsignadaId
@@ -244,72 +350,9 @@ def obtener_equipo_por_tag(tag):
     return equipo
 
 
-
-def equipo_upsert_completo(tag, marca, modelo, serial, ubicacion, persona_asignada,
-                           cargador, maletin, mouse, teclado, observaciones,
-                           impresora=0, lector=0):
-    """
-    Upsert del equipo SIN perder la persona asignada.
-    Guarda además impresora y lector (bit).
-    """
+def archivo_principal_get(tag: str):
     conn = get_connection()
     cur = conn.cursor()
-
-    # 1) Resolver PersonaAsignadaId (si se dio nombre)
-    persona_id = None
-    if persona_asignada and persona_asignada.strip():
-        cur.execute("""
-            DECLARE @PersonaId INT;
-            EXEC ti.sp_Persona_Upsert @Nombre=?, @PersonaId=@PersonaId OUTPUT;
-            SELECT @PersonaId;
-        """, (persona_asignada.strip(),))
-        row = cur.fetchone()
-        persona_id = row[0] if row else None
-
-    # 2) MERGE con 26 placeholders:
-    #    1 (USING) + 12 (UPDATE) + 13 (INSERT) = 26
-    sql = """
-        MERGE ti.Equipo AS target
-        USING (SELECT CAST(? AS NVARCHAR(50)) AS Tag) AS src
-        ON (target.Tag = src.Tag)
-        WHEN MATCHED THEN
-            UPDATE SET
-                Marca       = ?,
-                Modelo      = ?,
-                Serial      = ?,
-                Ubicacion   = ?,
-                PersonaAsignadaId = COALESCE(?, target.PersonaAsignadaId),
-                Cargador    = ?,
-                Maletin     = ?,
-                Mouse       = ?,
-                Teclado     = ?,
-                Impresora   = ?,      -- NUEVO
-                Lector      = ?,      -- NUEVO
-                Observaciones = ?
-        WHEN NOT MATCHED THEN
-            INSERT (Tag, Marca, Modelo, Serial, Ubicacion, PersonaAsignadaId,
-                    Cargador, Maletin, Mouse, Teclado, Impresora, Lector, Observaciones)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-    """
-
-    params = (
-        # USING (1)
-        tag,
-        # UPDATE (12)
-        marca, modelo, serial, ubicacion, persona_id,
-        cargador, maletin, mouse, teclado, impresora, lector, observaciones,
-        # INSERT (13)
-        tag, marca, modelo, serial, ubicacion, persona_id,
-        cargador, maletin, mouse, teclado, impresora, lector, observaciones
-    )
-
-    cur.execute(sql, params)
-    conn.commit()
-    cur.close(); conn.close()
-
-
-def archivo_principal_get(tag: str):
-    conn = get_connection(); cur = conn.cursor()
     cur.execute("""
         SELECT TOP 1 Ruta, Nombre
         FROM ti.EquipoArchivo
@@ -317,22 +360,28 @@ def archivo_principal_get(tag: str):
         ORDER BY EquipoArchivoId DESC
     """, (tag,))
     row = cur.fetchone()
-    cur.close(); conn.close()
+    cur.close()
+    conn.close()
     if row:
         return {"ruta": row[0], "nombre": row[1]}
     return None
 
+
 def archivo_principal_set(tag: str, ruta: str, nombre: str):
-    conn = get_connection(); cur = conn.cursor()
+    conn = get_connection()
+    cur = conn.cursor()
     # Quita principal previo
     cur.execute("""
         UPDATE ti.EquipoArchivo
-           SET EsPrincipal = 0
-         WHERE Tag = ? AND EsPrincipal = 1
+            SET EsPrincipal = 0
+            WHERE Tag = ? AND EsPrincipal = 1
     """, (tag,))
     # Inserta nuevo principal
     cur.execute("""
         INSERT INTO ti.EquipoArchivo(Tag, Ruta, Nombre, EsPrincipal)
         VALUES(?, ?, ?, 1)
     """, (tag, ruta, nombre))
-    conn.commit(); cur.close(); conn.close()
+    conn.commit()
+    cur.close()
+    conn.close()
+
