@@ -501,13 +501,16 @@ def device_upload(tag):
 def device_reassign(tag):
     nueva = (request.form.get('nueva_persona') or '').strip()
     cargo = request.form.get('cargo') or None
+    area = request.form.get('area') or None
     fecha = request.form.get('fecha') or None
     registrado_por = request.form.get('registrado_por') or ''
     desc = request.form.get('descripcion') or None
     if not nueva:
         flash('Debe indicar el nombre de la nueva persona.', 'danger')
         return redirect(url_for('device_view', tag=tag))
-    sp_equipo_reasignar(tag, nueva, cargo, fecha, registrado_por, desc)
+    
+
+    sp_equipo_reasignar(tag, nueva, cargo, fecha, registrado_por, desc, area)
     flash(f'Equipo {tag} reasignado a {nueva}.', 'success')
     return redirect(url_for('device_view', tag=tag))
 

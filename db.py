@@ -176,8 +176,8 @@ def historial_por_equipo(tag):
     return rows
 
 
-def sp_equipo_reasignar(tag, nueva_persona, cargo=None, fecha=None, registrado_por='TI', descripcion=None):
-    # normaliza fecha
+def sp_equipo_reasignar(tag, nueva_persona, cargo=None, fecha=None, registrado_por='TI', descripcion=None, area=None):
+    # 1. Normalizar fecha
     parsed = None
     if fecha:
         txt = fecha.replace('T', ' ')
@@ -188,10 +188,23 @@ def sp_equipo_reasignar(tag, nueva_persona, cargo=None, fecha=None, registrado_p
                 pass
 
     conn = get_connection(); cur = conn.cursor()
+    
+    # 2. ACTUALIZACIÓN MANUAL (Para corregir los datos del equipo actual)
+    # Esto asegura que el Área y el Cargo se guarden en la tabla ti.Equipo
+    cur.execute("""
+        UPDATE ti.Equipo 
+        SET Cargo = ?, 
+            Area = ?,
+            TipoUbicacion = 'ADMINISTRATIVO'
+        WHERE LTRIM(RTRIM(Tag)) = ?
+    """, (cargo, area, tag))
+
+    # 3. EJECUTAR EL PROCEDIMIENTO (Para el historial y cambio de nombre)
     cur.execute("""
         EXEC ti.sp_Equipo_Reasignar
             @Tag=?, @NuevaPersona=?, @Cargo=?, @FechaCambio=?, @RegistradoPor=?, @Descripcion=?;
     """, (tag, nueva_persona, cargo, parsed, registrado_por, descripcion))
+    
     conn.commit(); cur.close(); conn.close()
 
 
